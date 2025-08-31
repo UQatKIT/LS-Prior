@@ -5126,7 +5126,7 @@ packages:
   timestamp: 1746634858826
 - pypi: ./
   name: ls-prior
-  version: 0.1.dev6+g5c3de7669.d20250830
+  version: 0.1.dev10+g05db4ff95.d20250831
   sha256: b8e3282ac97e291d5c075b15f2523a869ec5b09cf0e5404327f4a8e398204298
   requires_python: '>=3.13'
   editable: true
