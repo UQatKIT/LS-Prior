@@ -16,7 +16,9 @@ ffi = cffi.FFI()
 # ==================================================================================================
 class FEMHandler:
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, mesh: dlx.mesh.Mesh, fe_data: tuple[str, int]) -> None:
+    def __init__(
+        self, mesh: dlx.mesh.Mesh, fe_data: tuple[str, Annotated[int, Is[lambda x: x > 0]]]
+    ) -> None:
         self.function_space = dlx.fem.functionspace(mesh, fe_data)
 
     # ----------------------------------------------------------------------------------------------
