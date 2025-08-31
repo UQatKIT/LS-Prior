@@ -6,6 +6,7 @@ import dolfinx as dlx
 import numpy as np
 import ufl
 from beartype.vale import Is
+from dolfinx.fem import petsc
 from mpi4py import MPI
 from petsc4py import PETSc
 
@@ -16,7 +17,7 @@ ffi = cffi.FFI()
 class FEMHandler:
     # ----------------------------------------------------------------------------------------------
     def __init__(self, mesh: dlx.mesh.Mesh, fe_data: tuple[str, int]) -> None:
-        self.function_space = dlx.fem.FunctionSpace(mesh, fe_data)
+        self.function_space = dlx.fem.functionspace(mesh, fe_data)
 
     # ----------------------------------------------------------------------------------------------
     def generate_forms(
@@ -39,7 +40,8 @@ class FEMHandler:
 
     # ----------------------------------------------------------------------------------------------
     def assemble_matrix(self, form: ufl.Form) -> PETSc.Mat:
-        matrix = dlx.fem.petsc.assemble_matrix(dlx.fem.form(form))
+        matrix = petsc.assemble_matrix(dlx.fem.form(form))
+        matrix.assemble()
         return matrix
 
 
@@ -53,14 +55,14 @@ class FEMMatrixBlockFactorization:
         self._local_vertex_coordinates = mesh.geometry.x
         self._local_cell_vertex_indices = mesh.geometry.dofmap
         self._pproc_cell_distribution_map = mesh.topology.index_map(mesh.topology.dim)
-        self._dof_map = function_space.dof_map
-        self._pproc_dof_distribution_map = function_space.dof_map.index_map
+        self._dofmap = function_space.dofmap
+        self._pproc_dof_distribution_map = function_space.dofmap.index_map
 
         self._num_local_cells = self._pproc_cell_distribution_map.size_local
         self._num_global_cells = self._pproc_cell_distribution_map.size_global
-        self._num_cell_dofs = self._pproc_dof_distribution_map.dof_layout.num_dofs
         self._num_local_dofs = self._pproc_dof_distribution_map.size_local
         self._num_global_dofs = self._pproc_dof_distribution_map.size_global
+        self._num_cell_dofs = function_space.dofmap.dof_layout.num_dofs
 
         self._assembly_kernel = self._init_assembly_kernel(mesh.comm, form)
 
@@ -153,7 +155,7 @@ class FEMMatrixBlockFactorization:
         global_cell_inds = self._pproc_cell_distribution_map.local_to_global(local_cell_inds)
 
         for local_ind, global_ind in zip(local_cell_inds, global_cell_inds, strict=True):
-            local_cell_dofs = self._dof_map.cell_dofs(local_ind)
+            local_cell_dofs = self._dofmap.cell_dofs(local_ind)
             global_cell_dofs = self._pproc_dof_distribution_map.local_to_global(
                 local_cell_dofs
             ).astype(PETSc.IntType)

@@ -23,6 +23,11 @@ class PETScComponent(ABC):
     def create_output_vector(self) -> PETSc.Vec:
         pass
 
+    @property
+    @abstractmethod
+    def shape(self) -> tuple[int, int]:
+        pass
+
 
 # --------------------------------------------------------------------------------------------------
 class NumpyComponent(ABC):
@@ -30,6 +35,11 @@ class NumpyComponent(ABC):
     def apply(
         self, vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        pass
+
+    @property
+    @abstractmethod
+    def shape(self) -> tuple[int, int]:
         pass
 
 
@@ -55,7 +65,8 @@ class InverseMatrixSolver(PETScComponent):
         self._solver = PETSc.KSP().create(mpi_communicator)
         self._solver.setOperators(matrix)
         self._solver.setType(solver_settings.solver_type)
-        self._solver.setPC(solver_settings.preconditioner_type)
+        preconditioner = self._solver.getPC()
+        preconditioner.setType(solver_settings.preconditioner_type)
         self._solver.setInitialGuessNonzero(False)
         self._solver.setTolerances(
             rtol=solver_settings.relative_tolerance,
@@ -74,6 +85,11 @@ class InverseMatrixSolver(PETScComponent):
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
         return self._matrix.createVecLeft()
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._matrix.getSize()
 
 
 # ==================================================================================================
@@ -105,6 +121,11 @@ class BilaplacianPrecision(NumpyComponent):
         output_vector = self._output_buffer.getArray()
         return output_vector
 
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._output_buffer.getSize(), self._input_buffer.getSize()
+
 
 # ==================================================================================================
 class BilaplacianCovariance(NumpyComponent):
@@ -134,6 +155,11 @@ class BilaplacianCovariance(NumpyComponent):
         self._spde_system_matrix_inverse.apply(self._temp2_buffer, self._output_buffer)
         output_vector = self._output_buffer.getArray()
         return output_vector
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self._output_buffer.getSize(), self._input_buffer.getSize()
 
 
 # ==================================================================================================
@@ -165,5 +191,5 @@ class BilaplacianCovarianceFactor(NumpyComponent):
 
     # ----------------------------------------------------------------------------------------------
     @property
-    def input_dimension(self) -> int:
-        return self._mass_matrix_factor.getSize()[1]
+    def shape(self) -> tuple[int, int]:
+        return self._output_buffer.getSize(), self._input_buffer.getSize()
