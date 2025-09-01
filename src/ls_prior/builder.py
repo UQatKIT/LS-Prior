@@ -5,6 +5,7 @@ from typing import Annotated
 import dolfinx as dlx
 import numpy as np
 from beartype.vale import Is
+from dolfinx.fem import petsc
 from mpi4py import MPI
 from petsc4py import PETSc
 
@@ -60,14 +61,48 @@ class BilaplacianPriorBuilder:
 
     # ----------------------------------------------------------------------------------------------
     def build(self) -> prior.Prior:
-        fem_handler = fem.FEMHandler(self._mesh, self._fe_data)
-        mass_matrix_form, spde_matrix_form = fem_handler.generate_forms(self._kappa, self._tau)
-        mass_matrix = fem_handler.assemble_matrix(mass_matrix_form)
-        spde_matrix = fem_handler.assemble_matrix(spde_matrix_form)
+        mass_matrix, spde_matrix, mass_matrix_factor, converter = self._build_fem_structures()
+        precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
+            self._build_component_interfaces(
+                mass_matrix, spde_matrix, mass_matrix_factor, converter
+            )
+        )
+        bilaplace_prior = prior.Prior(
+            self._mean_vector,
+            precision_operator_interface,
+            covariance_operator_interface,
+            sampling_factor_interface,
+            seed=0,
+        )
+        return bilaplace_prior
+
+    # ----------------------------------------------------------------------------------------------
+    def _build_fem_structures(self) -> tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
+        function_space = dlx.fem.functionspace(self._mesh, self._fe_data)
+        mass_matrix_form, spde_matrix_form = fem.generate_forms(
+            function_space, self._kappa, self._tau, self._robin_const
+        )
+        mass_matrix = petsc.assemble_matrix(dlx.fem.form(mass_matrix_form))
+        spde_matrix = petsc.assemble_matrix(dlx.fem.form(spde_matrix_form))
+        mass_matrix.assemble()
+        spde_matrix.assemble()
         mass_matrix_factorization = fem.FEMMatrixBlockFactorization(
-            self._mesh, fem_handler.function_space, mass_matrix_form
+            self._mesh, function_space, mass_matrix_form
         )
         mass_matrix_factor = mass_matrix_factorization.assemble()
+        converter = fem.FEMConverter(self._mesh, function_space)
+
+        return mass_matrix, spde_matrix, mass_matrix_factor, converter
+
+    def _build_component_interfaces(
+        self,
+        mass_matrix: PETSc.Mat,
+        spde_matrix: PETSc.Mat,
+        mass_matrix_factor: PETSc.Mat,
+        converter: fem.FEMConverter,
+    ) -> tuple[
+        components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
+    ]:
         mass_matrix_inverse = components.InverseMatrixSolver(
             self._cg_solver_settings, mass_matrix, self._mpi_communicator
         )
@@ -79,13 +114,17 @@ class BilaplacianPriorBuilder:
         sampling_factor = components.BilaplacianCovarianceFactor(
             mass_matrix_factor, spde_matrix_inverse
         )
-        num_dofs = fem_handler.function_space.dofmap.index_map.size_local
-        bilaplace_prior = prior.Prior(
-            self._mean_vector,
-            precision_operator,
-            covariance_operator,
-            sampling_factor,
-            dimension=num_dofs,
-            seed=self._seed,
+
+        precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
+        covariance_operator_interface = components.InterfaceComponent(
+            covariance_operator, converter
         )
-        return bilaplace_prior
+        sampling_factor_interface = components.InterfaceComponent(
+            sampling_factor, converter, convert_input_from_mesh=False, convert_output_to_mesh=True
+        )
+
+        return (
+            precision_operator_interface,
+            covariance_operator_interface,
+            sampling_factor_interface,
+        )

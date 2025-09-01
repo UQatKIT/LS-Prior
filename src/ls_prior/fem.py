@@ -6,7 +6,6 @@ import dolfinx as dlx
 import numpy as np
 import ufl
 from beartype.vale import Is
-from dolfinx.fem import petsc
 from mpi4py import MPI
 from petsc4py import PETSc
 
@@ -14,37 +13,69 @@ ffi = cffi.FFI()
 
 
 # ==================================================================================================
-class FEMHandler:
+def generate_forms(
+    function_space: dlx.fem.FunctionSpace,
+    kappa: Annotated[Real, Is[lambda x: x > 0]],
+    tau: Annotated[Real, Is[lambda x: x > 0]],
+    robin_const: float | None = None,
+) -> tuple[ufl.Form, ufl.Form]:
+    trial_function = ufl.TrialFunction(function_space)
+    test_function = ufl.TestFunction(function_space)
+    mass_matrix_form = ufl.inner(trial_function, test_function) * ufl.dx
+    stiffness_matrix_form = ufl.inner(ufl.grad(trial_function), ufl.grad(test_function)) * ufl.dx
+    spde_matrix_form = kappa**2 * tau * mass_matrix_form + tau * stiffness_matrix_form
+    if robin_const is not None:
+        robin_boundary_form = robin_const * ufl.inner(trial_function, test_function) * ufl.ds
+        spde_matrix_form += robin_boundary_form
+    return mass_matrix_form, spde_matrix_form
+
+
+# ==================================================================================================
+class FEMConverter:
     # ----------------------------------------------------------------------------------------------
-    def __init__(
-        self, mesh: dlx.mesh.Mesh, fe_data: tuple[str, Annotated[int, Is[lambda x: x > 0]]]
-    ) -> None:
-        self.function_space = dlx.fem.functionspace(mesh, fe_data)
+    def __init__(self, mesh: dlx.mesh.Mesh, function_space: dlx.fem.FunctionSpace):
+        vertex_space = dlx.fem.functionspace(mesh, ("Lagrange", 1))
+        if not np.allclose(vertex_space.tabulate_dof_coordinates(), mesh.geometry.x):
+            raise ValueError(
+                "The converter works under the assumption that the process-local "
+                "ordering of vertices in a dolfinx mesh corresponds to the "
+                "process-local ordering of degrees of freedom for a P1 function space. "
+                "This assumption is not fulfilled."
+            )
+        self._dof_function = dlx.fem.Function(function_space)
+        self._vertex_function = dlx.fem.Function(vertex_space)
+        self.dof_space_dim = function_space.dofmap.index_map.size_local
+        self.vertex_space_dim = vertex_space.dofmap.index_map.size_local
 
     # ----------------------------------------------------------------------------------------------
-    def generate_forms(
-        self,
-        kappa: Annotated[Real, Is[lambda x: x > 0]],
-        tau: Annotated[Real, Is[lambda x: x > 0]],
-        robin_const: float | None = None,
-    ) -> tuple[ufl.Form, ufl.Form]:
-        trial_function = ufl.TrialFunction(self.function_space)
-        test_function = ufl.TestFunction(self.function_space)
-        mass_matrix_form = ufl.inner(trial_function, test_function) * ufl.dx
-        stiffness_matrix_form = (
-            ufl.inner(ufl.grad(trial_function), ufl.grad(test_function)) * ufl.dx
-        )
-        spde_matrix_form = kappa**2 * tau * mass_matrix_form + tau * stiffness_matrix_form
-        if robin_const is not None:
-            robin_boundary_form = robin_const * ufl.inner(trial_function, test_function) * ufl.ds
-            spde_matrix_form += robin_boundary_form
-        return mass_matrix_form, spde_matrix_form
+    def convert_vertex_values_to_dofs(
+        self, vertex_values: np.ndarray[tuple[int], np.dtype[np.float64]]
+    ) -> PETSc.Vec:
+        if not vertex_values.shape == (self.vertex_space_dim,):
+            raise ValueError(
+                f"Expected vertex_values to have shape {(self.vertex_space_dim,)}, "
+                f"but got {vertex_values.shape}"
+            )
+        self._vertex_function.x.array[:] = vertex_values
+        self._vertex_function.x.scatter_forward()
+        self._dof_function.interpolate(self._vertex_function)
+        assert self._dof_function.x.array.shape == (self.dof_space_dim,)
+        return self._dof_function.x.petsc_vec
 
     # ----------------------------------------------------------------------------------------------
-    def assemble_matrix(self, form: ufl.Form) -> PETSc.Mat:
-        matrix = petsc.assemble_matrix(dlx.fem.form(form))
-        matrix.assemble()
-        return matrix
+    def convert_dofs_to_vertex_values(
+        self, dof_values: PETSc.Vec
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        if not dof_values.getSize() == self.dof_space_dim:
+            raise ValueError(
+                f"Expected dof_values to have size {self.dof_space_dim}, "
+                f"but got {dof_values.getSize()}"
+            )
+        self._dof_function.x.array[:] = dof_values
+        self._dof_function.x.scatter_forward()
+        self._vertex_function.interpolate(self._dof_function)
+        assert self._vertex_function.x.array.shape == (self.vertex_space_dim,)
+        return self._vertex_function.x.array
 
 
 # ==================================================================================================
@@ -72,6 +103,8 @@ class FEMMatrixBlockFactorization:
     def assemble(self) -> PETSc.Mat:
         block_diagonal_matrix, local_global_dof_matrix = self._set_up_petsc_mats()
         self._assemble_matrices_over_cells(block_diagonal_matrix, local_global_dof_matrix)
+        block_diagonal_matrix.assemble()
+        local_global_dof_matrix.assemble()
         local_global_dof_matrix.transpose()
         matrix_factorization = local_global_dof_matrix.matMult(block_diagonal_matrix)
         return matrix_factorization
@@ -179,6 +212,3 @@ class FEMMatrixBlockFactorization:
             self._insert_in_local_global_dof_matrix(
                 global_ind, global_cell_dofs, local_global_dof_matrix
             )
-
-        block_diagonal_matrix.assemble()
-        local_global_dof_matrix.assemble()
