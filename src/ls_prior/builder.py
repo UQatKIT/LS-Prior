@@ -90,7 +90,7 @@ class BilaplacianPriorBuilder:
             self._mesh, function_space, mass_matrix_form
         )
         mass_matrix_factor = mass_matrix_factorization.assemble()
-        converter = fem.FEMConverter(self._mesh, function_space)
+        converter = fem.FEMConverter(function_space)
 
         return mass_matrix, spde_matrix, mass_matrix_factor, converter
 

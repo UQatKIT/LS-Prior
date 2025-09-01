@@ -24,6 +24,7 @@ numpy = ">=2.2,<3"
 fenics-dolfinx = ">=0.9.0,<0.10"
 mpich = ">=4.3.1,<5"
 beartype = ">=0.21.0,<0.22"
+scifem = ">=0.7.0,<0.8"
 
 [tool.pixi.pypi-dependencies]
 ls_prior = { path = ".", editable = true }

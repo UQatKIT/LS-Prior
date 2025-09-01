@@ -4,6 +4,7 @@ from typing import Annotated
 import cffi
 import dolfinx as dlx
 import numpy as np
+import scifem as dlx_helper
 import ufl
 from beartype.vale import Is
 from mpi4py import MPI
@@ -33,19 +34,14 @@ def generate_forms(
 # ==================================================================================================
 class FEMConverter:
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, mesh: dlx.mesh.Mesh, function_space: dlx.fem.FunctionSpace):
-        vertex_space = dlx.fem.functionspace(mesh, ("Lagrange", 1))
-        if not np.allclose(vertex_space.tabulate_dof_coordinates(), mesh.geometry.x):
-            raise ValueError(
-                "The converter works under the assumption that the process-local "
-                "ordering of vertices in a dolfinx mesh corresponds to the "
-                "process-local ordering of degrees of freedom for a P1 function space. "
-                "This assumption is not fulfilled."
-            )
+    def __init__(self, function_space: dlx.fem.FunctionSpace):
+        vertex_space = dlx.fem.functionspace(function_space.mesh, ("Lagrange", 1))
         self._dof_function = dlx.fem.Function(function_space)
         self._vertex_function = dlx.fem.Function(vertex_space)
         self.dof_space_dim = function_space.dofmap.index_map.size_local
         self.vertex_space_dim = vertex_space.dofmap.index_map.size_local
+        self._vertex_to_dof_map = dlx_helper.vertex_to_dofmap(vertex_space)
+        self._dof_to_vertex_map = dlx_helper.dof_to_vertexmap(vertex_space)
 
     # ----------------------------------------------------------------------------------------------
     def convert_vertex_values_to_dofs(
@@ -56,7 +52,7 @@ class FEMConverter:
                 f"Expected vertex_values to have shape {(self.vertex_space_dim,)}, "
                 f"but got {vertex_values.shape}"
             )
-        self._vertex_function.x.array[:] = vertex_values
+        self._vertex_function.x.array[:] = vertex_values[self._vertex_to_dof_map]
         self._vertex_function.x.scatter_forward()
         self._dof_function.interpolate(self._vertex_function)
         assert self._dof_function.x.array.shape == (self.dof_space_dim,)
@@ -75,7 +71,8 @@ class FEMConverter:
         self._dof_function.x.scatter_forward()
         self._vertex_function.interpolate(self._dof_function)
         assert self._vertex_function.x.array.shape == (self.vertex_space_dim,)
-        return self._vertex_function.x.array
+        vertex_values = self._vertex_function.x.array[self._dof_to_vertex_map]
+        return vertex_values
 
 
 # ==================================================================================================
