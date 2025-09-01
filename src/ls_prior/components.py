@@ -104,11 +104,11 @@ class InterfaceComponent:
 # ==================================================================================================
 @dataclass
 class InverseMatrixSolverSettings:
-    solver_type: PETSc.KSP.Type
-    preconditioner_type: PETSc.PC.Type
-    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]]
-    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]]
-    max_num_iterations: Annotated[int, Is[lambda x: x > 0]]
+    solver_type: str
+    preconditioner_type: str
+    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
+    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
+    max_num_iterations: Annotated[int, Is[lambda x: x > 0]] | None
 
 
 class InverseMatrixSolver(PETScComponent):

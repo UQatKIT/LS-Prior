@@ -107,7 +107,7 @@ class FEMMatrixBlockFactorization:
         return matrix_factorization
 
     # ----------------------------------------------------------------------------------------------
-    def _init_assembly_kernel(self, mpi_communicator: MPI.Comm, form: ufl.Form) -> None:
+    def _init_assembly_kernel(self, mpi_communicator: MPI.Comm, form: ufl.Form) -> cffi.FFI.CData:
         form_compiled, *_ = dlx.jit.ffcx_jit(
             mpi_communicator,
             form,
@@ -143,7 +143,7 @@ class FEMMatrixBlockFactorization:
     # ----------------------------------------------------------------------------------------------
     def _insert_in_block_diagonal_matrix(
         self,
-        global_ind: int,
+        global_ind: np.integer,
         cell_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]],
         block_diagonal_matrix: PETSc.Mat,
     ) -> None:
@@ -162,8 +162,8 @@ class FEMMatrixBlockFactorization:
     # ----------------------------------------------------------------------------------------------
     def _insert_in_local_global_dof_matrix(
         self,
-        global_ind: int,
-        global_cell_dofs: np.ndarray[tuple[int], np.dtype[np.float64]],
+        global_ind: np.integer,
+        global_cell_dofs: np.ndarray[tuple[int], np.dtype[np.integer]],
         local_global_dof_matrix: PETSc.Mat,
     ) -> None:
         row_inds = np.arange(
