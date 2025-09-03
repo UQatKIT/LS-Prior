@@ -7,7 +7,25 @@ from . import components
 
 # ==================================================================================================
 class Prior:
-    """."""
+    r"""Prior distribution class.
+
+    This class implements functionality of a Gaussian prior measure that is typically required in
+    the context of Bayesian inference. In the spirit of separation of concerns, the prior component
+    is rather stupid. It simply utilizes objects for the (representation of) a covariance operator
+    $\mathcal{C}$, its factorization $\widehat{\mathcal{C}}$, and a precision operator
+    $\mathcal{C}^{-1}$. These components have to adhere to the interface prescribed by the
+    `components.InterfaceComponent` class. The necessary objects can be manually assembled and
+    be handed to the `Prior` class for maximum flexibility. On the other hand, the `builder`
+    module provides a convenient alternative for the setup of a preconfigured prior object.
+
+    Methods:
+        evaluate_cost: Evaluate the cost/negative log-probability for a given parameter vector.
+        evaluate_gradient: Evaluate the gradient of the cost functional with respect to
+            a given parameter vector.
+        evaluate_hessian_vector_product: Evaluate the Hessian-vector product of the cost functional
+            in the given direction.
+        sample: Generate a sample from the prior distribution.
+    """
 
     # ----------------------------------------------------------------------------------------------
     def __init__(
@@ -18,19 +36,23 @@ class Prior:
         covariance_factorization: components.InterfaceComponent,
         seed: int,
     ) -> None:
-        """_summary_.
+        r"""Initialize Prior distribution object.
 
         Args:
-            mean_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
-            precision_operator (components.InterfaceComponent): _description_
-            covariance_operator (components.InterfaceComponent): _description_
-            covariance_factorization (components.InterfaceComponent): _description_
-            seed (int): _description_
+            mean_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Mean vector $\overline{m}$
+                of the prior measure.
+            precision_operator (components.InterfaceComponent): Representation of the precision
+                operator $\mathcal{C}^{-1}$.
+            covariance_operator (components.InterfaceComponent): Representation of the covariance
+                operator $\mathcal{C}$.
+            covariance_factorization (components.InterfaceComponent): Representation of a
+                factorization $\widehat{\mathcal{C}}$ of the covariance operator for sampling.
+            seed (int): Random seed for the internal random number generator.
 
         Raises:
-            ValueError: _description_
-            ValueError: _description_
-            ValueError: _description_
+            ValueError: Checks that precision operator has the correct shape.
+            ValueError: Checks that covariance operator has the correct shape.
+            ValueError: Checks that covariance factor has the correct shape.
         """
         mean_vector_dim = mean_vector.shape[0]
         if not precision_operator.shape == (mean_vector_dim, mean_vector_dim):
@@ -58,13 +80,16 @@ class Prior:
     def evaluate_cost(
         self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> float:
-        """_summary_.
+        r"""Evaluate the cost functional, i.e. the negative log probability for given input.
+
+        Computes $\frac{1}{2} (m-\overline{m})^T \mathcal{C}^{-1} (m-\overline{m})$.
 
         Args:
-            parameter_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
+            parameter_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Parameter candidate for
+                which to evaluate  the cost/negative log probability, given on mesh vertices.
 
         Returns:
-            float: _description_
+            float: cost/negative log probability
         """
         self._check_input_dimension(parameter_vector)
         difference_vector = parameter_vector - self._mean_vector
@@ -76,13 +101,17 @@ class Prior:
     def evaluate_gradient(
         self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        """_summary_.
+        r"""Evaluate the gradient of the cost/negative log-probability w.r.t. the parameter vector.
+
+        Computes $\mathcal{C}^{-1} (m - \overline{m})$.
 
         Args:
-            parameter_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
+            parameter_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Parameter candidate for
+                which to evaluate the gradient, given on mesh vertices.
 
         Returns:
-            np.ndarray[tuple[int], np.dtype[np.float64]]: _description_
+            np.ndarray[tuple[int], np.dtype[np.float64]]: Gradient of the cost/negative
+                log-probability, given on mesh vertices.
         """
         self._check_input_dimension(parameter_vector)
         difference_vector = parameter_vector - self._mean_vector
@@ -95,13 +124,17 @@ class Prior:
         self,
         direction_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        """_summary_.
+        r"""Evaluate the application of the Hessian of the cost functional on a given direction.
+
+        Computes $\mathcal{C}^{-1} m_{\text{dir}}$.
 
         Args:
-            direction_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
+            direction_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Direction for which
+                to evaluate the Hessian-vector product, given on mesh vertices.
 
         Returns:
-            np.ndarray[tuple[int], np.dtype[np.float64]]: _description_
+            np.ndarray[tuple[int], np.dtype[np.float64]]: Hessian-vector product,
+                given on mesh vertices.
         """
         self._check_input_dimension(direction_vector)
         hessian_vector_product = self._precision_operator.apply(direction_vector)
@@ -110,10 +143,14 @@ class Prior:
 
     # ----------------------------------------------------------------------------------------------
     def generate_sample(self) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        """_summary_.
+        r"""Generate a sample from the prior measure.
+
+        Computes sample in two-step procedure:
+        1. Generate i.i.d. normal vector $\xi$ matching input dimension of $\widehat{\mathcal{C}}$.
+        2. Multiply with covariance factorization $\widehat{\mathcal{C}}$ and add mean
 
         Returns:
-            np.ndarray[tuple[int], np.dtype[np.float64]]: _description_
+            np.ndarray[tuple[int], np.dtype[np.float64]]: Sample vector, given on mesh vertices.
         """
         random_vector_size = self._covariance_factorization.shape[1]
         random_vector = self._prng.normal(loc=0.0, scale=1.0, size=random_vector_size)
@@ -124,14 +161,7 @@ class Prior:
 
     # ----------------------------------------------------------------------------------------------
     def _check_input_dimension(self, vector: np.ndarray) -> None:
-        """_summary_.
-
-        Args:
-            vector (np.ndarray): _description_
-
-        Raises:
-            ValueError: _description_
-        """
+        """Checks dimension of input vectors, applied in all interface methods."""
         if not vector.shape == self._mean_vector.shape:
             raise ValueError(
                 f"Vector shape {vector.shape} does not match "
@@ -140,11 +170,7 @@ class Prior:
 
     # ----------------------------------------------------------------------------------------------
     def _check_output_dimension(self, vector: np.ndarray) -> None:
-        """_summary_.
-
-        Args:
-            vector (np.ndarray): _description_
-        """
+        """Checks dimension of result vectors, applied in all interface methods."""
         assert vector.shape == self._mean_vector.shape, (
             f"Sample vector shape {vector.shape} does not match "
             f"mean vector shape {self._mean_vector.shape}."
