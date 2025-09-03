@@ -38,6 +38,7 @@ format = "ruff format"
 serve-docs = "mkdocs serve"
 build-docs = "mkdocs build"
 changelog = "git-cliff"
+pre-commit = "pre-commit install"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.4.1,<9"
