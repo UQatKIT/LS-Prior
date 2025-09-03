@@ -74,9 +74,13 @@ class BilaplacianPriorBuilder:
         Returns:
             prior.Prior: _description_
         """
-        mass_matrix, spde_matrix, mass_matrix_factor, converter = self._build_fem_structures()
+        mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter = (
+            self._build_fem_structures()
+        )
         precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
-            self._build_interface(mass_matrix, spde_matrix, mass_matrix_factor, converter)
+            self._build_interface(
+                mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter
+            )
         )
         bilaplace_prior = prior.Prior(
             self._mean_vector,
@@ -88,7 +92,9 @@ class BilaplacianPriorBuilder:
         return bilaplace_prior
 
     # ----------------------------------------------------------------------------------------------
-    def _build_fem_structures(self) -> tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
+    def _build_fem_structures(
+        self,
+    ) -> tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
         """_summary_.
 
         Returns:
@@ -102,20 +108,21 @@ class BilaplacianPriorBuilder:
         spde_matrix = petsc.assemble_matrix(dlx.fem.form(spde_matrix_form))
         mass_matrix.assemble()
         spde_matrix.assemble()
-        mass_matrix_factorization = fem.FEMMatrixBlockFactorization(
+        mass_matrix_factorization = fem.FEMMatrixFactorizationAssembler(
             self._mesh, function_space, mass_matrix_form
         )
-        mass_matrix_factor = mass_matrix_factorization.assemble()
+        block_diagonal_matrix, dof_map_matrix = mass_matrix_factorization.assemble()
         converter = fem.FEMConverter(function_space)
 
-        return mass_matrix, spde_matrix, mass_matrix_factor, converter
+        return mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter
 
     # ----------------------------------------------------------------------------------------------
     def _build_interface(
         self,
         mass_matrix: PETSc.Mat,
         spde_matrix: PETSc.Mat,
-        mass_matrix_factor: PETSc.Mat,
+        block_diagonal_matrix: PETSc.Mat,
+        dof_map_matrix: PETSc.Mat,
         converter: fem.FEMConverter,
     ) -> tuple[
         components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
@@ -125,7 +132,8 @@ class BilaplacianPriorBuilder:
         Args:
             mass_matrix (PETSc.Mat): _description_
             spde_matrix (PETSc.Mat): _description_
-            mass_matrix_factor (PETSc.Mat): _description_
+            block_diagonal_matrix (PETSc.Mat): _description_
+            dof_map_matrix (PETSc.Mat): _description_
             converter (fem.FEMConverter): _description_
 
         Returns:
@@ -135,14 +143,15 @@ class BilaplacianPriorBuilder:
         """
         mass_matrix_component = components.Matrix(mass_matrix)
         spe_matrix_component = components.Matrix(spde_matrix)
-        mass_matrix_factor_component = components.Matrix(mass_matrix_factor)
+        mass_matrix_factor_component = components.MatrixFactorization(
+            block_diagonal_matrix, dof_map_matrix
+        )
         mass_matrix_inverse_component = components.InverseMatrixSolver(
             self._cg_solver_settings, mass_matrix
         )
         spde_matrix_inverse_component = components.InverseMatrixSolver(
             self._amg_solver_settings, spde_matrix
         )
-
         precision_operator = components.BilaplacianPrecision(
             spe_matrix_component, mass_matrix_inverse_component
         )
@@ -152,7 +161,6 @@ class BilaplacianPriorBuilder:
         sampling_factor = components.BilaplacianCovarianceFactor(
             mass_matrix_factor_component, spde_matrix_inverse_component
         )
-
         precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
         covariance_operator_interface = components.InterfaceComponent(
             covariance_operator, converter

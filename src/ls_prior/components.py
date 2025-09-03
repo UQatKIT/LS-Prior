@@ -284,6 +284,62 @@ class Matrix(PETScComponent):
 
 
 # ==================================================================================================
+class MatrixFactorization(PETScComponent):
+    """."""
+
+    # ----------------------------------------------------------------------------------------------
+    def __init__(self, block_diagonal_matrix: PETSc.Mat, dof_map_matrix: PETSc.Mat) -> None:
+        """_summary_.
+
+        Args:
+            petsc_matrix (PETSc.Mat): _description_
+        """
+        self._block_diagonal_matrix = block_diagonal_matrix
+        self._dof_map_matrix = dof_map_matrix
+        self._dof_map_matrix.transpose()
+        self._temp_buffer = self._block_diagonal_matrix.createVecLeft()
+
+    # ----------------------------------------------------------------------------------------------
+    def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
+        self._block_diagonal_matrix.mult(input_vector, self._temp_buffer)
+        self._dof_map_matrix.mult(self._temp_buffer, output_vector)
+
+    # ----------------------------------------------------------------------------------------------
+    def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
+        return self._block_diagonal_matrix.createVecRight()
+
+    # ----------------------------------------------------------------------------------------------
+    def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
+        return self._dof_map_matrix.createVecLeft()
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
+        return self._dof_map_matrix.getSize()[0], self._block_diagonal_matrix.getSize()[1]
+
+
+# ==================================================================================================
 class BilaplacianPrecision(PETScComponent):
     """."""
 
@@ -411,7 +467,9 @@ class BilaplacianCovarianceFactor(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def __init__(
-        self, mass_matrix_factor: Matrix, spde_system_matrix_inverse: InverseMatrixSolver
+        self,
+        mass_matrix_factor: MatrixFactorization,
+        spde_system_matrix_inverse: InverseMatrixSolver,
     ) -> None:
         """_summary_.
 
