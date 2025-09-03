@@ -174,13 +174,28 @@ class FEMConverter:
 
 # ==================================================================================================
 class FEMMatrixFactorizationAssembler:
-    r"""Assembler for the rectangular factorization of the FEM matrix.
+    r"""Assembler for the rectangular factorization of an FEM matrix.
 
-    The rectangular FEM matrix factorization we assemble is of the form $BP$, where
-    $B\in\mathbb{R}^{MN_{\text{elem}} \times MN_{\text{elem}}}$ is a
-    block-diagonal matrix whose block consist of the local FEM matrix Cholesky factor of each
-    mesh cell, and $P\in\mathbb{R}^{MN_{\text{elem}} \times N_{\text{DoF}}}$ contains the
-    mapping from each row of $B$ to the global DoFs of the matrix entries resembled by that row.
+    This class provides the functionality for efficient factorization of a finite element matrix
+    $M$, i.e. it implements the (sparse representation of) assembly of a rectangular matrix
+    $\widehat{M}$ s.th. $M = \widehat{M}\widehat{M}^T$. The factorization exploits the
+    characteristics of standard finite element assembly procedures. This assembly is typically done
+    locally for the contribution of each mesh cell. These contributions are gathered into a global
+    matrix, with overlap at indices of vertices that are shared between cells. Now let $N$ be the
+    number of degrees of freedom of the finite element space, $M$ the number of cells in the
+    underlying mesh, and $N_e$ the number of degrees of freedom per cell. The matrix $M$ clearly has
+    size $(N, N)$. Importantly, it can be decomposed as $M=L^T M_e L$. Here, the Matrix
+    $M_e\in \mathbb{R}^{MN_e}$ is a block diagonal matrix, containing the local FEM matrix
+    contributions over all cells in each block. $L\in \mathbb{R}^{MN_e \times N}$ is a sparse
+    matrix that maps the local cell DoFs in each block $M_e$ to their respective global DoFs. We
+    can efficiently compute the Cholesky factor $\widehat{M}_e$ of $M_e$ by computing the
+    cholesky factorization of each individual block. In particular, $\widehat{M}_e$ is still sparse,
+    as opposed to standard Cholesky factors of sparse matrices. $\widehat{M}_e$ and $L$ now
+    represent a sparse factorization $\widehat{M} = L^T \widehat{M}_e$ as above.
+    The two batrices shouldn't be multiplied directly to avoid fill-in. However, matrix-vector
+    products can be computed efficiently, by first multiplying with $\widehat{M}_e$,
+    and the result with $L$. For further information on this factorization procedure, we refer to
+    https://epubs.siam.org/doi/abs/10.1137/18M1175239
 
     !!! warning
         The assembly procedure uses internals of dolfinx, which might be subject to change in
