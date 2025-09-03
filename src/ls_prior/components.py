@@ -155,83 +155,6 @@ class InterfaceComponent:
 
 
 # ==================================================================================================
-@dataclass
-class InverseMatrixSolverSettings:
-    """Settings for the inverse matrix solver."""
-
-    solver_type: str
-    preconditioner_type: str
-    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
-    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
-    max_num_iterations: Annotated[int, Is[lambda x: x > 0]] | None
-
-
-class InverseMatrixSolver(PETScComponent):
-    """_summary_."""
-
-    # ----------------------------------------------------------------------------------------------
-    def __init__(
-        self, solver_settings: InverseMatrixSolverSettings, petsc_matrix: PETSc.Mat
-    ) -> None:
-        """_summary_.
-
-        Args:
-            solver_settings (InverseMatrixSolverSettings): _description_
-            petsc_matrix (PETSc.Mat): _description_
-        """
-        self._petsc_matrix = petsc_matrix
-        self._solver = PETSc.KSP().create(petsc_matrix.comm)
-        self._solver.setOperators(petsc_matrix)
-        self._solver.setType(solver_settings.solver_type)
-        preconditioner = self._solver.getPC()
-        preconditioner.setType(solver_settings.preconditioner_type)
-        self._solver.setInitialGuessNonzero(False)
-        self._solver.setTolerances(
-            rtol=solver_settings.relative_tolerance,
-            atol=solver_settings.absolute_tolerance,
-            max_it=solver_settings.max_num_iterations,
-        )
-
-    # ----------------------------------------------------------------------------------------------
-    def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
-        """_summary_.
-
-        Args:
-            input_vector (PETSc.Vec): _description_
-            output_vector (PETSc.Vec): _description_
-        """
-        self._solver.solve(input_vector, output_vector)
-
-    # ----------------------------------------------------------------------------------------------
-    def create_input_vector(self) -> PETSc.Vec:
-        """_summary_.
-
-        Returns:
-            PETSc.Vec: _description_
-        """
-        return self._petsc_matrix.createVecRight()
-
-    # ----------------------------------------------------------------------------------------------
-    def create_output_vector(self) -> PETSc.Vec:
-        """_summary_.
-
-        Returns:
-            PETSc.Vec: _description_
-        """
-        return self._petsc_matrix.createVecLeft()
-
-    # ----------------------------------------------------------------------------------------------
-    @property
-    def shape(self) -> tuple[int, int]:
-        """_summary_.
-
-        Returns:
-            tuple[int, int]: _description_
-        """
-        return self._petsc_matrix.getSize()
-
-
-# ==================================================================================================
 class Matrix(PETScComponent):
     """."""
 
@@ -337,6 +260,83 @@ class MatrixFactorization(PETScComponent):
             tuple[int, int]: _description_
         """
         return self._dof_map_matrix.getSize()[0], self._block_diagonal_matrix.getSize()[1]
+
+
+# ==================================================================================================
+@dataclass
+class InverseMatrixSolverSettings:
+    """Settings for the inverse matrix solver."""
+
+    solver_type: str
+    preconditioner_type: str
+    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
+    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
+    max_num_iterations: Annotated[int, Is[lambda x: x > 0]] | None
+
+
+class InverseMatrixSolver(PETScComponent):
+    """_summary_."""
+
+    # ----------------------------------------------------------------------------------------------
+    def __init__(
+        self, solver_settings: InverseMatrixSolverSettings, petsc_matrix: PETSc.Mat
+    ) -> None:
+        """_summary_.
+
+        Args:
+            solver_settings (InverseMatrixSolverSettings): _description_
+            petsc_matrix (PETSc.Mat): _description_
+        """
+        self._petsc_matrix = petsc_matrix
+        self._solver = PETSc.KSP().create(petsc_matrix.comm)
+        self._solver.setOperators(petsc_matrix)
+        self._solver.setType(solver_settings.solver_type)
+        preconditioner = self._solver.getPC()
+        preconditioner.setType(solver_settings.preconditioner_type)
+        self._solver.setInitialGuessNonzero(False)
+        self._solver.setTolerances(
+            rtol=solver_settings.relative_tolerance,
+            atol=solver_settings.absolute_tolerance,
+            max_it=solver_settings.max_num_iterations,
+        )
+
+    # ----------------------------------------------------------------------------------------------
+    def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
+        self._solver.solve(input_vector, output_vector)
+
+    # ----------------------------------------------------------------------------------------------
+    def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
+        return self._petsc_matrix.createVecRight()
+
+    # ----------------------------------------------------------------------------------------------
+    def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
+        return self._petsc_matrix.createVecLeft()
+
+    # ----------------------------------------------------------------------------------------------
+    @property
+    def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
+        return self._petsc_matrix.getSize()
 
 
 # ==================================================================================================
