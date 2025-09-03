@@ -28,7 +28,6 @@ class BilaplacianPriorSettings:
     amg_relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None = None
     amg_absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None = None
     amg_max_iterations: Annotated[int, Is[lambda x: x > 0]] | None = None
-    mpi_communicator: MPI.Comm = field(default_factory=lambda: MPI.COMM_WORLD)
 
 
 # ==================================================================================================
@@ -42,7 +41,6 @@ class BilaplacianPriorBuilder:
         self._robin_const = settings.robin_const
         self._seed = settings.seed
         self._fe_data = settings.fe_data
-        self._mpi_communicator = settings.mpi_communicator
 
         self._cg_solver_settings = components.InverseMatrixSolverSettings(
             solver_type=PETSc.KSP.Type.CG,
@@ -63,9 +61,7 @@ class BilaplacianPriorBuilder:
     def build(self) -> prior.Prior:
         mass_matrix, spde_matrix, mass_matrix_factor, converter = self._build_fem_structures()
         precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
-            self._build_component_interfaces(
-                mass_matrix, spde_matrix, mass_matrix_factor, converter
-            )
+            self._build_interface(mass_matrix, spde_matrix, mass_matrix_factor, converter)
         )
         bilaplace_prior = prior.Prior(
             self._mean_vector,
@@ -94,7 +90,8 @@ class BilaplacianPriorBuilder:
 
         return mass_matrix, spde_matrix, mass_matrix_factor, converter
 
-    def _build_component_interfaces(
+    # ----------------------------------------------------------------------------------------------
+    def _build_interface(
         self,
         mass_matrix: PETSc.Mat,
         spde_matrix: PETSc.Mat,
@@ -103,16 +100,24 @@ class BilaplacianPriorBuilder:
     ) -> tuple[
         components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
     ]:
-        mass_matrix_inverse = components.InverseMatrixSolver(
-            self._cg_solver_settings, mass_matrix, self._mpi_communicator
+        mass_matrix_component = components.Matrix(mass_matrix)
+        spe_matrix_component = components.Matrix(spde_matrix)
+        mass_matrix_factor_component = components.Matrix(mass_matrix_factor)
+        mass_matrix_inverse_component = components.InverseMatrixSolver(
+            self._cg_solver_settings, mass_matrix
         )
-        spde_matrix_inverse = components.InverseMatrixSolver(
-            self._amg_solver_settings, spde_matrix, self._mpi_communicator
+        spde_matrix_inverse_component = components.InverseMatrixSolver(
+            self._amg_solver_settings, spde_matrix
         )
-        precision_operator = components.BilaplacianPrecision(spde_matrix, mass_matrix_inverse)
-        covariance_operator = components.BilaplacianCovariance(mass_matrix, spde_matrix_inverse)
+
+        precision_operator = components.BilaplacianPrecision(
+            spe_matrix_component, mass_matrix_inverse_component
+        )
+        covariance_operator = components.BilaplacianCovariance(
+            mass_matrix_component, spde_matrix_inverse_component
+        )
         sampling_factor = components.BilaplacianCovarianceFactor(
-            mass_matrix_factor, spde_matrix_inverse
+            mass_matrix_factor_component, spde_matrix_inverse_component
         )
 
         precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
