@@ -40,11 +40,7 @@ class Prior:
     def evaluate_cost(
         self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> float:
-        if not parameter_vector.shape == self._mean_vector.shape:
-            raise ValueError(
-                f"Parameter vector shape {parameter_vector.shape} does not match "
-                f"the prescribed shape {(self._mean_vector.shape,)}."
-            )
+        self._check_input_dimension(parameter_vector)
         difference_vector = parameter_vector - self._mean_vector
         cost = 0.5 * np.inner(difference_vector, self._precision_operator.apply(difference_vector))
         assert cost >= 0, f"Cost needs to be non-negative, but is {cost}."
@@ -54,17 +50,10 @@ class Prior:
     def evaluate_gradient(
         self, parameter_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        if not parameter_vector.shape == self._mean_vector.shape:
-            raise ValueError(
-                f"Parameter vector shape {parameter_vector.shape} does not match "
-                f"the prescribed shape {self._mean_vector.shape}."
-            )
+        self._check_input_dimension(parameter_vector)
         difference_vector = parameter_vector - self._mean_vector
         gradient = self._precision_operator.apply(difference_vector)
-        assert gradient.shape == self._mean_vector.shape, (
-            f"Gradient shape {gradient.shape} does not match "
-            f"mean vector shape {self._mean_vector.shape}."
-        )
+        self._check_output_dimension(gradient)
         return gradient
 
     # ----------------------------------------------------------------------------------------------
@@ -72,26 +61,31 @@ class Prior:
         self,
         direction_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
-        if not direction_vector.shape == self._mean_vector.shape:
-            raise ValueError(
-                f"Direction vector shape {direction_vector.shape} does not match "
-                f"the prescribed shape {self._mean_vector.shape}."
-            )
+        self._check_input_dimension(direction_vector)
         hessian_vector_product = self._precision_operator.apply(direction_vector)
-        assert hessian_vector_product.shape == self._mean_vector.shape, (
-            f"Hessian-vector product shape {hessian_vector_product.shape} does not match "
-            f"mean vector shape {self._mean_vector.shape}."
-        )
+        self._check_output_dimension(hessian_vector_product)
         return hessian_vector_product
 
     # ----------------------------------------------------------------------------------------------
-    def generate_sample(self):
+    def generate_sample(self) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         random_vector_size = self._covariance_factorization.shape[1]
         random_vector = self._prng.normal(loc=0.0, scale=1.0, size=random_vector_size)
         sample_vector = self._covariance_factorization.apply(random_vector)
-        assert sample_vector.shape == self._mean_vector.shape, (
-            f"Sample vector shape {sample_vector.shape} does not match "
-            f"mean vector shape {self._mean_vector.shape}."
-        )
+        self._check_output_dimension(sample_vector)
         sample_vector += self._mean_vector
         return sample_vector
+
+    # ----------------------------------------------------------------------------------------------
+    def _check_input_dimension(self, vector: np.ndarray) -> None:
+        if not vector.shape == self._mean_vector.shape:
+            raise ValueError(
+                f"Vector shape {vector.shape} does not match "
+                f"the mean vector shape {self._mean_vector.shape}."
+            )
+
+    # ----------------------------------------------------------------------------------------------
+    def _check_output_dimension(self, vector: np.ndarray) -> None:
+        assert vector.shape == self._mean_vector.shape, (
+            f"Sample vector shape {vector.shape} does not match "
+            f"mean vector shape {self._mean_vector.shape}."
+        )
