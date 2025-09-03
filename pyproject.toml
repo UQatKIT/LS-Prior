@@ -51,29 +51,30 @@ mkdocs-autorefs = ">=1.4.3,<2"
 mkdocstrings-python = ">=1.18.0,<2"
 git-cliff = ">=2.10.0,<3"
 
-[tool.pixi.feature.style.dependencies]
-ruff = ">=0.12.10,<0.13"
-
-[tool.pixi.feature.dev.dependencies]
+[tool.pixi.feature.examples.dependencies]
 jupyter = ">=1.1.1,<2"
 pandas = ">=2.3.2,<3"
 matplotlib = ">=3.10.5,<4"
 seaborn = ">=0.13.2,<0.14"
-pre-commit = ">=4.3.0,<5"
-gmsh = ">=4.13.1,<5"
-pygmsh = ">=7.1.17,<8"
 pyvista = ">=0.46.3,<0.47"
 trame = ">=3.12.0,<4"
 trame-vtk = ">=2.9.1,<3"
 trame-vuetify = ">=3.0.2,<4"
 
+[tool.pixi.feature.dev.dependencies]
+ruff = ">=0.12.10,<0.13"
+pre-commit = ">=4.3.0,<5"
+gmsh = ">=4.13.1,<5"
+pygmsh = ">=7.1.17,<8"
+
+
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
-style = { features = ["dev", "style"], solve-group = "default" }
+examples = { features = ["examples"], solve-group = "default" }
 test = { features = ["dev", "test"], solve-group = "default" }
 docs = { features = ["dev", "docs"], solve-group = "default" }
-all = { features = ["dev", "docs", "style", "test"], solve-group = "default" }
+all = { features = ["dev", "docs", "examples", "test"], solve-group = "default" }
 
 
 # --------------------------------------------------------------------------------------------------
