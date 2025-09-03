@@ -1,3 +1,5 @@
+"""."""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from numbers import Real
@@ -5,7 +7,6 @@ from typing import Annotated
 
 import numpy as np
 from beartype.vale import Is
-from mpi4py import MPI
 from petsc4py import PETSc
 
 from . import fem
@@ -13,22 +14,41 @@ from . import fem
 
 # ==================================================================================================
 class PETScComponent(ABC):
+    """_summary_."""
+
     @abstractmethod
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
-        pass
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
 
     @abstractmethod
     def create_input_vector(self) -> PETSc.Vec:
-        pass
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
 
     @abstractmethod
     def create_output_vector(self) -> PETSc.Vec:
-        pass
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
 
     @property
     @abstractmethod
     def shape(self) -> tuple[int, int]:
-        pass
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
 
     def _check_dimensions(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
         if not input_vector.getSize() == self.shape[1]:
@@ -45,6 +65,8 @@ class PETScComponent(ABC):
 
 # ==================================================================================================
 class InterfaceComponent:
+    """."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self,
@@ -53,6 +75,14 @@ class InterfaceComponent:
         convert_input_from_mesh: bool = True,
         convert_output_to_mesh: bool = True,
     ) -> None:
+        """_summary_.
+
+        Args:
+            component (PETScComponent): _description_
+            converter (fem.FEMConverter): _description_
+            convert_input_from_mesh (bool, optional): _description_. Defaults to True.
+            convert_output_to_mesh (bool, optional): _description_. Defaults to True.
+        """
         self._component = component
         self._converter = converter
         self._convert_input_from_mesh = convert_input_from_mesh
@@ -64,6 +94,17 @@ class InterfaceComponent:
     def apply(
         self, input_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        """_summary_.
+
+        Args:
+            input_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            np.ndarray[tuple[int], np.dtype[np.float64]]: _description_
+        """
         input_copy = input_vector.copy()
 
         # Convert input from vertex-based to function space DoFs
@@ -95,6 +136,11 @@ class InterfaceComponent:
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         if self._convert_input_from_mesh:
             input_size = self._converter.vertex_space_dim
         else:
@@ -111,6 +157,8 @@ class InterfaceComponent:
 # ==================================================================================================
 @dataclass
 class InverseMatrixSolverSettings:
+    """Settings for the inverse matrix solver."""
+
     solver_type: str
     preconditioner_type: str
     relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
@@ -119,10 +167,18 @@ class InverseMatrixSolverSettings:
 
 
 class InverseMatrixSolver(PETScComponent):
+    """_summary_."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self, solver_settings: InverseMatrixSolverSettings, petsc_matrix: PETSc.Mat
     ) -> None:
+        """_summary_.
+
+        Args:
+            solver_settings (InverseMatrixSolverSettings): _description_
+            petsc_matrix (PETSc.Mat): _description_
+        """
         self._petsc_matrix = petsc_matrix
         self._solver = PETSc.KSP().create(petsc_matrix.comm)
         self._solver.setOperators(petsc_matrix)
@@ -138,51 +194,109 @@ class InverseMatrixSolver(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
         self._solver.solve(input_vector, output_vector)
 
     # ----------------------------------------------------------------------------------------------
     def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._petsc_matrix.createVecRight()
 
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._petsc_matrix.createVecLeft()
 
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         return self._petsc_matrix.getSize()
 
 
 # ==================================================================================================
 class Matrix(PETScComponent):
-    def __init__(self, petsc_matrix: PETSc.Mat):
+    """."""
+
+    # ----------------------------------------------------------------------------------------------
+    def __init__(self, petsc_matrix: PETSc.Mat) -> None:
+        """_summary_.
+
+        Args:
+            petsc_matrix (PETSc.Mat): _description_
+        """
         self._petsc_matrix = petsc_matrix
 
     # ----------------------------------------------------------------------------------------------
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
         self._petsc_matrix.mult(input_vector, output_vector)
 
     # ----------------------------------------------------------------------------------------------
     def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._petsc_matrix.createVecRight()
 
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._petsc_matrix.createVecLeft()
 
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         return self._petsc_matrix.getSize()
 
 
 # ==================================================================================================
 class BilaplacianPrecision(PETScComponent):
+    """."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self, spde_system_matrix: Matrix, mass_matrix_inverse: InverseMatrixSolver
     ) -> None:
+        """_summary_.
+
+        Args:
+            spde_system_matrix (Matrix): _description_
+            mass_matrix_inverse (InverseMatrixSolver): _description_
+        """
         self._spde_system_matrix = spde_system_matrix
         self._mass_matrix_inverse = mass_matrix_inverse
         self._temp1_buffer = spde_system_matrix.create_output_vector()
@@ -190,6 +304,12 @@ class BilaplacianPrecision(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
         self._check_dimensions(input_vector, output_vector)
         self._spde_system_matrix.apply(input_vector, self._temp1_buffer)
         self._mass_matrix_inverse.apply(self._temp1_buffer, self._temp2_buffer)
@@ -197,24 +317,47 @@ class BilaplacianPrecision(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._spde_system_matrix.create_input_vector()
 
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._spde_system_matrix.create_output_vector()
 
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         return self._spde_system_matrix.shape
 
 
 # ==================================================================================================
 class BilaplacianCovariance(PETScComponent):
+    """."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self, mass_matrix: Matrix, spde_system_matrix_inverse: InverseMatrixSolver
     ) -> None:
+        """_summary_.
+
+        Args:
+            mass_matrix (Matrix): _description_
+            spde_system_matrix_inverse (InverseMatrixSolver): _description_
+        """
         self._mass_matrix = mass_matrix
         self._spde_system_matrix_inverse = spde_system_matrix_inverse
         self._temp1_buffer = mass_matrix.create_input_vector()
@@ -222,6 +365,12 @@ class BilaplacianCovariance(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
         self._check_dimensions(input_vector, output_vector)
         self._spde_system_matrix_inverse.apply(input_vector, self._temp1_buffer)
         self._mass_matrix.apply(self._temp1_buffer, self._temp2_buffer)
@@ -229,43 +378,87 @@ class BilaplacianCovariance(PETScComponent):
 
     # ----------------------------------------------------------------------------------------------
     def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._spde_system_matrix_inverse.create_input_vector()
 
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._spde_system_matrix_inverse.create_output_vector()
 
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         return self._spde_system_matrix_inverse.shape
 
 
 # ==================================================================================================
 class BilaplacianCovarianceFactor(PETScComponent):
+    """."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self, mass_matrix_factor: Matrix, spde_system_matrix_inverse: InverseMatrixSolver
     ) -> None:
+        """_summary_.
+
+        Args:
+            mass_matrix_factor (Matrix): _description_
+            spde_system_matrix_inverse (InverseMatrixSolver): _description_
+        """
         self._mass_matrix_factor = mass_matrix_factor
         self._spde_system_matrix_inverse = spde_system_matrix_inverse
         self._temp_buffer = mass_matrix_factor.create_output_vector()
 
     # ----------------------------------------------------------------------------------------------
     def apply(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
+        """_summary_.
+
+        Args:
+            input_vector (PETSc.Vec): _description_
+            output_vector (PETSc.Vec): _description_
+        """
         self._check_dimensions(input_vector, output_vector)
         self._mass_matrix_factor.apply(input_vector, self._temp_buffer)
         self._spde_system_matrix_inverse.apply(self._temp_buffer, output_vector)
 
     # ----------------------------------------------------------------------------------------------
     def create_input_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._mass_matrix_factor.create_input_vector()
 
     # ----------------------------------------------------------------------------------------------
     def create_output_vector(self) -> PETSc.Vec:
+        """_summary_.
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         return self._spde_system_matrix_inverse.create_output_vector()
 
     # ----------------------------------------------------------------------------------------------
     @property
     def shape(self) -> tuple[int, int]:
+        """_summary_.
+
+        Returns:
+            tuple[int, int]: _description_
+        """
         return self._spde_system_matrix_inverse.shape[0], self._mass_matrix_factor.shape[1]

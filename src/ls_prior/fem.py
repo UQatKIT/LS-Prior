@@ -1,3 +1,5 @@
+"""."""
+
 from numbers import Real
 from typing import Annotated
 
@@ -18,8 +20,19 @@ def generate_forms(
     function_space: dlx.fem.FunctionSpace,
     kappa: Annotated[Real, Is[lambda x: x > 0]],
     tau: Annotated[Real, Is[lambda x: x > 0]],
-    robin_const: float | None = None,
+    robin_const: Real | None = None,
 ) -> tuple[ufl.Form, ufl.Form]:
+    """.
+
+    Args:
+        function_space (dlx.fem.FunctionSpace): _description_
+        kappa (Real): _description_
+        tau (Real): _description_
+        robin_const (Real | None, optional): _description_. Defaults to None.
+
+    Returns:
+        tuple[ufl.Form, ufl.Form]: _description_
+    """
     trial_function = ufl.TrialFunction(function_space)
     test_function = ufl.TestFunction(function_space)
     mass_matrix_form = ufl.inner(trial_function, test_function) * ufl.dx
@@ -33,8 +46,15 @@ def generate_forms(
 
 # ==================================================================================================
 class FEMConverter:
+    """."""
+
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, function_space: dlx.fem.FunctionSpace):
+    def __init__(self, function_space: dlx.fem.FunctionSpace) -> None:
+        """_summary_.
+
+        Args:
+            function_space (dlx.fem.FunctionSpace): _description_
+        """
         vertex_space = dlx.fem.functionspace(function_space.mesh, ("Lagrange", 1))
         self._dof_function = dlx.fem.Function(function_space)
         self._vertex_function = dlx.fem.Function(vertex_space)
@@ -47,6 +67,17 @@ class FEMConverter:
     def convert_vertex_values_to_dofs(
         self, vertex_values: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> PETSc.Vec:
+        """_summary_.
+
+        Args:
+            vertex_values (np.ndarray[tuple[int], np.dtype[np.float64]]): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            PETSc.Vec: _description_
+        """
         if not vertex_values.shape == (self.vertex_space_dim,):
             raise ValueError(
                 f"Expected vertex_values to have shape {(self.vertex_space_dim,)}, "
@@ -55,13 +86,27 @@ class FEMConverter:
         self._vertex_function.x.array[:] = vertex_values[self._vertex_to_dof_map]
         self._vertex_function.x.scatter_forward()
         self._dof_function.interpolate(self._vertex_function)
-        assert self._dof_function.x.array.shape == (self.dof_space_dim,)
+        assert self._dof_function.x.array.shape == (self.dof_space_dim,), (
+            f"Created PETSc vector has size {self._dof_function.x.array.shape}, "
+            f"but expected {(self.dof_space_dim,)}"
+        )
         return self._dof_function.x.petsc_vec
 
     # ----------------------------------------------------------------------------------------------
     def convert_dofs_to_vertex_values(
         self, dof_values: PETSc.Vec
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
+        """_summary_.
+
+        Args:
+            dof_values (PETSc.Vec): _description_
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            np.ndarray[tuple[int], np.dtype[np.float64]]: _description_
+        """
         if not dof_values.getSize() == self.dof_space_dim:
             raise ValueError(
                 f"Expected dof_values to have size {self.dof_space_dim}, "
@@ -70,17 +115,29 @@ class FEMConverter:
         self._dof_function.x.array[:] = dof_values
         self._dof_function.x.scatter_forward()
         self._vertex_function.interpolate(self._dof_function)
-        assert self._vertex_function.x.array.shape == (self.vertex_space_dim,)
+        assert self._vertex_function.x.array.shape == (self.vertex_space_dim,), (
+            f"Created PETSc vector has size {self._vertex_function.x.array.shape}, "
+            f"but expected {(self.vertex_space_dim,)}"
+        )
         vertex_values = self._vertex_function.x.array[self._dof_to_vertex_map]
         return vertex_values
 
 
 # ==================================================================================================
 class FEMMatrixBlockFactorization:
+    """."""
+
     # ----------------------------------------------------------------------------------------------
     def __init__(
         self, mesh: dlx.mesh.Mesh, function_space: dlx.fem.FunctionSpace, form: ufl.Form
     ) -> None:
+        """_summary_.
+
+        Args:
+            mesh (dlx.mesh.Mesh): _description_
+            function_space (dlx.fem.FunctionSpace): _description_
+            form (ufl.Form): _description_
+        """
         self._mpi_communicator = mesh.comm
         self._local_vertex_coordinates = mesh.geometry.x
         self._local_cell_vertex_indices = mesh.geometry.dofmap
@@ -98,6 +155,11 @@ class FEMMatrixBlockFactorization:
 
     # ----------------------------------------------------------------------------------------------
     def assemble(self) -> PETSc.Mat:
+        """_summary_.
+
+        Returns:
+            PETSc.Mat: _description_
+        """
         block_diagonal_matrix, local_global_dof_matrix = self._set_up_petsc_mats()
         self._assemble_matrices_over_cells(block_diagonal_matrix, local_global_dof_matrix)
         block_diagonal_matrix.assemble()
@@ -108,6 +170,15 @@ class FEMMatrixBlockFactorization:
 
     # ----------------------------------------------------------------------------------------------
     def _init_assembly_kernel(self, mpi_communicator: MPI.Comm, form: ufl.Form) -> cffi.FFI.CData:
+        """_summary_.
+
+        Args:
+            mpi_communicator (MPI.Comm): _description_
+            form (ufl.Form): _description_
+
+        Returns:
+            cffi.FFI.CData: _description_
+        """
         form_compiled, *_ = dlx.jit.ffcx_jit(
             mpi_communicator,
             form,
@@ -121,6 +192,11 @@ class FEMMatrixBlockFactorization:
 
     # ----------------------------------------------------------------------------------------------
     def _set_up_petsc_mats(self) -> tuple[PETSc.Mat, PETSc.Mat]:
+        """_summary_.
+
+        Returns:
+            tuple[PETSc.Mat, PETSc.Mat]: _description_
+        """
         block_diagonal_matrix = PETSc.Mat().createAIJ(
             [
                 self._num_global_cells * self._num_cell_dofs,
@@ -147,6 +223,13 @@ class FEMMatrixBlockFactorization:
         cell_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]],
         block_diagonal_matrix: PETSc.Mat,
     ) -> None:
+        """_summary_.
+
+        Args:
+            global_ind (np.integer): _description_
+            cell_matrix (np.ndarray[tuple[int, int], np.dtype[np.float64]]): _description_
+            block_diagonal_matrix (PETSc.Mat): _description_
+        """
         row_col_inds = np.arange(
             global_ind * self._num_cell_dofs,
             (global_ind + 1) * self._num_cell_dofs,
@@ -166,6 +249,13 @@ class FEMMatrixBlockFactorization:
         global_cell_dofs: np.ndarray[tuple[int], np.dtype[np.integer]],
         local_global_dof_matrix: PETSc.Mat,
     ) -> None:
+        """_summary_.
+
+        Args:
+            global_ind (np.integer): _description_
+            global_cell_dofs (np.ndarray[tuple[int], np.dtype[np.integer]]): _description_
+            local_global_dof_matrix (PETSc.Mat): _description_
+        """
         row_inds = np.arange(
             global_ind * self._num_cell_dofs,
             (global_ind + 1) * self._num_cell_dofs,
@@ -183,6 +273,12 @@ class FEMMatrixBlockFactorization:
     def _assemble_matrices_over_cells(
         self, block_diagonal_matrix: PETSc.Mat, local_global_dof_matrix: PETSc.Mat
     ) -> None:
+        """_summary_.
+
+        Args:
+            block_diagonal_matrix (PETSc.Mat): _description_
+            local_global_dof_matrix (PETSc.Mat): _description_
+        """
         local_cell_inds = np.arange(self._num_local_cells, dtype=np.int64)
         global_cell_inds = self._pproc_cell_distribution_map.local_to_global(local_cell_inds)
 

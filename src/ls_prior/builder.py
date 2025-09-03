@@ -1,4 +1,6 @@
-from dataclasses import dataclass, field
+"""."""
+
+from dataclasses import dataclass
 from numbers import Real
 from typing import Annotated
 
@@ -6,7 +8,6 @@ import dolfinx as dlx
 import numpy as np
 from beartype.vale import Is
 from dolfinx.fem import petsc
-from mpi4py import MPI
 from petsc4py import PETSc
 
 from . import components, fem, prior
@@ -15,6 +16,8 @@ from . import components, fem, prior
 # ==================================================================================================
 @dataclass
 class BilaplacianPriorSettings:
+    """_summary_."""
+
     mesh: dlx.mesh.Mesh
     mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
     kappa: Annotated[Real, Is[lambda x: x > 0]]
@@ -32,8 +35,15 @@ class BilaplacianPriorSettings:
 
 # ==================================================================================================
 class BilaplacianPriorBuilder:
+    """_summary_."""
+
     # ----------------------------------------------------------------------------------------------
-    def __init__(self, settings: BilaplacianPriorSettings):
+    def __init__(self, settings: BilaplacianPriorSettings) -> None:
+        """_summary_.
+
+        Args:
+            settings (BilaplacianPriorSettings): _description_
+        """
         self._mesh = settings.mesh
         self._mean_vector = settings.mean_vector
         self._kappa = settings.kappa
@@ -59,6 +69,11 @@ class BilaplacianPriorBuilder:
 
     # ----------------------------------------------------------------------------------------------
     def build(self) -> prior.Prior:
+        """_summary_.
+
+        Returns:
+            prior.Prior: _description_
+        """
         mass_matrix, spde_matrix, mass_matrix_factor, converter = self._build_fem_structures()
         precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
             self._build_interface(mass_matrix, spde_matrix, mass_matrix_factor, converter)
@@ -74,6 +89,11 @@ class BilaplacianPriorBuilder:
 
     # ----------------------------------------------------------------------------------------------
     def _build_fem_structures(self) -> tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
+        """_summary_.
+
+        Returns:
+            tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]: _description_
+        """
         function_space = dlx.fem.functionspace(self._mesh, self._fe_data)
         mass_matrix_form, spde_matrix_form = fem.generate_forms(
             function_space, self._kappa, self._tau, self._robin_const
@@ -100,6 +120,19 @@ class BilaplacianPriorBuilder:
     ) -> tuple[
         components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
     ]:
+        """_summary_.
+
+        Args:
+            mass_matrix (PETSc.Mat): _description_
+            spde_matrix (PETSc.Mat): _description_
+            mass_matrix_factor (PETSc.Mat): _description_
+            converter (fem.FEMConverter): _description_
+
+        Returns:
+            tuple[components.InterfaceComponent,
+                  components.InterfaceComponent,
+                  components.InterfaceComponent]: _description_
+        """
         mass_matrix_component = components.Matrix(mass_matrix)
         spe_matrix_component = components.Matrix(spde_matrix)
         mass_matrix_factor_component = components.Matrix(mass_matrix_factor)
