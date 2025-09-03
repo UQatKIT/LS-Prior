@@ -1,4 +1,13 @@
-"""."""
+"""This module contains all FEM specific functionality in this package, based on dolfinx.
+
+Classes:
+    FEMConverter: Converter between vertex based data and DoF representation on a dolfinx
+        function space.
+    FEMMatrixFactorizationAssembler: Assembler for the rectangular factorization of an FEM matrix.
+
+Functions:
+    generate_forms: Generate variational forms for the mass matrix and SPDE system matrix.
+"""
 
 from numbers import Real
 from typing import Annotated
