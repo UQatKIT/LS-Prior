@@ -1,4 +1,8 @@
-"""."""
+"""Prior distribution interface.
+
+Class:
+    Prior: Prior distribution class.
+"""
 
 import numpy as np
 

@@ -16,7 +16,42 @@ from . import components, fem, prior
 # ==================================================================================================
 @dataclass
 class BilaplacianPriorSettings:
-    """_summary_."""
+    r"""Settings for the bilaplacian prior builder.
+
+    This dataclass collects all configuration options required to set up a biplaplacian prior
+    using the `BilaplacianPriorBuilder` class. The builder distributes these settings to the
+    respective components that are assembled within the builder.
+
+    Attributes:
+        mesh (dlx.mesh.Mesh): Dolfinx mesh on which the prior is defined.
+        mean_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Mean vector of the prior,
+            vertex-based representation.
+        kappa (Real): Parameter $\kappa$ in the SPDE formulation of the prior
+        tau (Real): Parameter $\tau$ in the SPDE formulation of the prior
+        robin_const (Real | None): Robin boundary condition constant. If `None`, homogeneous
+            Neumann boundary conditions are applied. Defaults to `None`.
+        seed (int): Random seed for the internal random number generator. Defaults to `0`.
+        fe_data (tuple[str, int]): Finite element type and degree used for the function space
+            setup. Defaults to `("CG", 1)`.
+        cg_relative_tolerance (Real | None): Relative tolerance for the CG solver used in the
+            application of the precision operator. If `None`, the default PETSc tolerance is used.
+            Defaults to `None`.
+        cg_absolute_tolerance (Real | None): Absolute tolerance for the CG solver used in the
+            application of the precision operator. If `None`, the default PETSc tolerance is used.
+            Defaults to `None`.
+        cg_max_iterations (int | None): Maximum number of iterations for the CG solver used in
+            the application of the precision operator. If `None`, the default PETSc value is used
+            Defaults to `None`.
+        amg_relative_tolerance (Real | None): Relative tolerance for the AMG solver used in the
+            application of the covariance operator and its factorization. If `None`, the default
+            PETSc tolerance is used. Defaults to `None`.
+        amg_absolute_tolerance (Real | None): Absolute tolerance for the AMG solver used in the
+            application of the covariance operator and its factorization. If `None`, the default
+            PETSc tolerance is used. Defaults to `None`.
+        amg_max_iterations (int | None): Maximum number of iterations for the AMG solver used in
+            the application of the covariance operator and its factorization. If `None`, the
+            default PETSc value is used. Defaults to `None`.
+    """
 
     mesh: dlx.mesh.Mesh
     mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]]
@@ -35,14 +70,14 @@ class BilaplacianPriorSettings:
 
 # ==================================================================================================
 class BilaplacianPriorBuilder:
-    """_summary_."""
+    """Builder for a Bilaplacian prior."""
 
     # ----------------------------------------------------------------------------------------------
     def __init__(self, settings: BilaplacianPriorSettings) -> None:
-        """_summary_.
+        """Initialize the builder with the given settings.
 
         Args:
-            settings (BilaplacianPriorSettings): _description_
+            settings (BilaplacianPriorSettings): Settings for the Bilaplacian prior.
         """
         self._mesh = settings.mesh
         self._mean_vector = settings.mean_vector
@@ -69,17 +104,23 @@ class BilaplacianPriorBuilder:
 
     # ----------------------------------------------------------------------------------------------
     def build(self) -> prior.Prior:
-        """_summary_.
+        """Build the Bilaplacian prior.
+
+        Internally, this method assembles all dolfinx structures, composes a hierarchy of
+        `PETScComponents`, wraps them in `InterfaceComponents` and hands them to the `Prior` class.
 
         Returns:
-            prior.Prior: _description_
+            prior.Prior: The constructed Bilaplacian prior.
         """
         mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter = (
             self._build_fem_structures()
         )
+        precision_operator, covariance_operator, sampling_factor = self._build_components(
+            mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix
+        )
         precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
-            self._build_interface(
-                mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter
+            self._build_interfaces(
+                precision_operator, covariance_operator, sampling_factor, converter
             )
         )
         bilaplace_prior = prior.Prior(
@@ -112,21 +153,19 @@ class BilaplacianPriorBuilder:
             self._mesh, function_space, mass_matrix_form
         )
         block_diagonal_matrix, dof_map_matrix = mass_matrix_factorization.assemble()
+        dof_map_matrix.transpose()
         converter = fem.FEMConverter(function_space)
 
         return mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix, converter
 
     # ----------------------------------------------------------------------------------------------
-    def _build_interface(
+    def _build_components(
         self,
         mass_matrix: PETSc.Mat,
         spde_matrix: PETSc.Mat,
         block_diagonal_matrix: PETSc.Mat,
         dof_map_matrix: PETSc.Mat,
-        converter: fem.FEMConverter,
-    ) -> tuple[
-        components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
-    ]:
+    ) -> tuple[components.PETScComponent, components.PETScComponent, components.PETScComponent]:
         """_summary_.
 
         Args:
@@ -134,6 +173,53 @@ class BilaplacianPriorBuilder:
             spde_matrix (PETSc.Mat): _description_
             block_diagonal_matrix (PETSc.Mat): _description_
             dof_map_matrix (PETSc.Mat): _description_
+
+        Returns:
+            tuple[components.PETScComponent,
+                  components.PETScComponent,
+                  components.PETScComponent]: _description_
+        """
+        # Set up base components
+        mass_matrix_component = components.Matrix(mass_matrix)
+        spde_matrix_component = components.Matrix(spde_matrix)
+        block_diagonal_matrix_component = components.Matrix(block_diagonal_matrix)
+        dof_map_matrix_component = components.Matrix(dof_map_matrix)
+        mass_matrix_inverse_component = components.InverseMatrixSolver(
+            self._cg_solver_settings, mass_matrix
+        )
+        spde_matrix_inverse_component = components.InverseMatrixSolver(
+            self._amg_solver_settings, spde_matrix
+        )
+        # Bilaplacian precision:C^{-1} = A M^{-1} A
+        precision_operator = components.PETScComponentComposition(
+            spde_matrix_component, mass_matrix_inverse_component, spde_matrix_component
+        )
+        # Bilaplacian covariance: C = A^{-1} M A^{-1}
+        covariance_operator = components.PETScComponentComposition(
+            spde_matrix_inverse_component, mass_matrix_component, spde_matrix_inverse_component
+        )
+        # Covariance factorization: \widehat{C} = A^{-1} \widehat{M} = A^{-1} L^T \widehat{M_e}
+        sampling_factor = components.PETScComponentComposition(
+            block_diagonal_matrix_component, dof_map_matrix_component, spde_matrix_inverse_component
+        )
+        return precision_operator, covariance_operator, sampling_factor
+
+    # ----------------------------------------------------------------------------------------------
+    def _build_interfaces(
+        self,
+        precision_operator: components.PETScComponent,
+        covariance_operator: components.PETScComponent,
+        sampling_factor: components.PETScComponent,
+        converter: fem.FEMConverter,
+    ) -> tuple[
+        components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
+    ]:
+        """_summary_.
+
+        Args:
+            precision_operator (components.PETScComponent): _description_
+            covariance_operator (components.PETScComponent): _description_
+            sampling_factor (components.PETScComponent): _description_
             converter (fem.FEMConverter): _description_
 
         Returns:
@@ -141,34 +227,14 @@ class BilaplacianPriorBuilder:
                   components.InterfaceComponent,
                   components.InterfaceComponent]: _description_
         """
-        mass_matrix_component = components.Matrix(mass_matrix)
-        spe_matrix_component = components.Matrix(spde_matrix)
-        mass_matrix_factor_component = components.MatrixFactorization(
-            block_diagonal_matrix, dof_map_matrix
-        )
-        mass_matrix_inverse_component = components.InverseMatrixSolver(
-            self._cg_solver_settings, mass_matrix
-        )
-        spde_matrix_inverse_component = components.InverseMatrixSolver(
-            self._amg_solver_settings, spde_matrix
-        )
-        precision_operator = components.BilaplacianPrecision(
-            spe_matrix_component, mass_matrix_inverse_component
-        )
-        covariance_operator = components.BilaplacianCovariance(
-            mass_matrix_component, spde_matrix_inverse_component
-        )
-        sampling_factor = components.BilaplacianCovarianceFactor(
-            mass_matrix_factor_component, spde_matrix_inverse_component
-        )
         precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
         covariance_operator_interface = components.InterfaceComponent(
             covariance_operator, converter
         )
+        # Do not convert sampling factor input, this is simply an array of numbers, not DoFs-based
         sampling_factor_interface = components.InterfaceComponent(
             sampling_factor, converter, convert_input_from_mesh=False, convert_output_to_mesh=True
         )
-
         return (
             precision_operator_interface,
             covariance_operator_interface,
