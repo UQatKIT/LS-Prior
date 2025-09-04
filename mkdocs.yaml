@@ -3,7 +3,7 @@
 # ==================================================================================================
 # -- Site metadata ---------------------------------------------------------------------------------
 docs_dir: docs/
-site_name: Eikonax
+site_name: LS-Prior
 site_author: Maximilian Kruse
 site_description: Large-Scale Gaussian Prior Fields via SPDEs
 repo_url: https://github.com/UQatKIT/LS-Prior
@@ -34,10 +34,10 @@ theme:
         name: Switch to light mode
 
   # Set Icons
-  favicon: images/radio_tower.png
+  favicon: images/bell_curve.png
   icon:
     annotation: material/plus-circle
-    logo: material/radio-tower
+    logo: material/chart-bell-curve
     repo: material/git
 
 # -- Markdown extensions ---------------------------------------------------------------------------
@@ -113,3 +113,8 @@ extra_css:
 # -- Navigation ------------------------------------------------------------------------------------
 nav:
   - Getting Started: index.md
+  - API Reference:
+      - FEM: api/fem.md
+      - Components: api/components.md
+      - Builder: api/builder.md
+      - Prior: api/prior.md

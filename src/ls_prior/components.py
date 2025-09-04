@@ -241,7 +241,7 @@ class InterfaceComponent:
 
         Args:
             input_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Input vector
-            to apply to component. Input will be copied to avoid modification of original array.
+                to apply to component. Input will be copied to avoid modification of original array.
 
         Raises:
             ValueError: If input is not converted, check that it matches dimension of the underlying

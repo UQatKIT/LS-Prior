@@ -123,7 +123,7 @@ class FEMConverter:
 
         Args:
             vertex_values (np.ndarray[tuple[int], np.dtype[np.float64]]): Array of data defined on
-            the vertices of the underlying computational mesh.
+                the vertices of the underlying computational mesh.
 
         Raises:
             ValueError: Checks that `vertex_values` has the same dimension as a P1 function space
@@ -204,7 +204,7 @@ class FEMMatrixFactorizationAssembler:
     The two batrices shouldn't be multiplied directly to avoid fill-in. However, matrix-vector
     products can be computed efficiently, by first multiplying with $\widehat{M}_e$,
     and the result with $L$. For further information on this factorization procedure, we refer to
-    https://epubs.siam.org/doi/abs/10.1137/18M1175239
+    [this publication](https://epubs.siam.org/doi/abs/10.1137/18M1175239).
 
     !!! warning
         The assembly procedure uses internals of dolfinx, which might be subject to change in
