@@ -22,7 +22,7 @@ representation.
 
 ## Installation
 
-LS-Prior is currently managed as a [Pixi](https://pixi.sh/latest/), a conda package is planned. To
+LS-Prior is currently managed as a [Pixi](https://pixi.sh/latest/) project, a conda package is planned. To
 start using LS-Prior, simply run
 ```bash
 pixi install
