@@ -1,4 +1,9 @@
-"""."""
+"""Builders for prior objects from lower-level components.
+
+Classes:
+    BilaplacianPriorSettings: Settings for the bilaplacian prior builder.
+    BilaplacianPriorBuilder: Builder for a Bilaplacian prior.
+"""
 
 from dataclasses import dataclass
 from numbers import Real
@@ -70,7 +75,14 @@ class BilaplacianPriorSettings:
 
 # ==================================================================================================
 class BilaplacianPriorBuilder:
-    """Builder for a Bilaplacian prior."""
+    r"""Builder for a Bilaplacian prior.
+
+    Specific builder fassed for a bilaplacian prior, i.e. the distribution that arises from solving
+    the SPDE $\tau(\kappa^2 - \Delta)^2 m = W$.
+
+    Methods:
+        build: Build the Bilaplacian prior.
+    """
 
     # ----------------------------------------------------------------------------------------------
     def __init__(self, settings: BilaplacianPriorSettings) -> None:
@@ -136,10 +148,12 @@ class BilaplacianPriorBuilder:
     def _build_fem_structures(
         self,
     ) -> tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
-        """_summary_.
+        r"""Assemble FEM data structures, i.e. FEM Matrices and `FEMConverter` object.
 
         Returns:
-            tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]: _description_
+            tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
+                mass matrix $M$, SPDE matrix $A$, block-diagonal matrix $\widehat{M}_w$,
+                DoF map matrix $L$, `FEMConverter` object.
         """
         function_space = dlx.fem.functionspace(self._mesh, self._fe_data)
         mass_matrix_form, spde_matrix_form = fem.generate_forms(
@@ -166,18 +180,26 @@ class BilaplacianPriorBuilder:
         block_diagonal_matrix: PETSc.Mat,
         dof_map_matrix: PETSc.Mat,
     ) -> tuple[components.PETScComponent, components.PETScComponent, components.PETScComponent]:
-        """_summary_.
+        r"""Build PETSc components for bilaplacian prior from FEM matrices.
+
+        The main components for the prior are:
+        1. Precision operator: $\mathcal{C}^{-1} = A M^{-1} A$
+        2. Covariance operator: $\mathcal{C} = A^{-1} M A^{-1}$
+        3. Sampling factor: $\widehat{\mathcal{C}} = A^{-1} L^T \widehat{M}_e$
 
         Args:
-            mass_matrix (PETSc.Mat): _description_
-            spde_matrix (PETSc.Mat): _description_
-            block_diagonal_matrix (PETSc.Mat): _description_
-            dof_map_matrix (PETSc.Mat): _description_
+            mass_matrix (PETSc.Mat): Mass matrix $M$.
+            spde_matrix (PETSc.Mat): SPDE matrix $A$.
+            block_diagonal_matrix (PETSc.Mat): Block-diagonal matrix $\widehat{M}_e$.
+            dof_map_matrix (PETSc.Mat): DoF map matrix $L$.
 
         Returns:
             tuple[components.PETScComponent,
                   components.PETScComponent,
-                  components.PETScComponent]: _description_
+                  components.PETScComponent]:
+                Precision operator $\mathcal{C}^{-1}$,
+                covariance operator $\mathcal{C}$,
+                sampling factor $\widehat{\mathcal{C}}$.
         """
         # Set up base components
         mass_matrix_component = components.Matrix(mass_matrix)
@@ -198,7 +220,7 @@ class BilaplacianPriorBuilder:
         covariance_operator = components.PETScComponentComposition(
             spde_matrix_inverse_component, mass_matrix_component, spde_matrix_inverse_component
         )
-        # Covariance factorization: \widehat{C} = A^{-1} \widehat{M} = A^{-1} L^T \widehat{M_e}
+        # Sampling factor: \widehat{C} = A^{-1} \widehat{M} = A^{-1} L^T \widehat{M_e}
         sampling_factor = components.PETScComponentComposition(
             block_diagonal_matrix_component, dof_map_matrix_component, spde_matrix_inverse_component
         )
@@ -214,18 +236,18 @@ class BilaplacianPriorBuilder:
     ) -> tuple[
         components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
     ]:
-        """_summary_.
+        r"""Wrap PETSc components in interface components.
 
         Args:
-            precision_operator (components.PETScComponent): _description_
-            covariance_operator (components.PETScComponent): _description_
-            sampling_factor (components.PETScComponent): _description_
-            converter (fem.FEMConverter): _description_
+            precision_operator (components.PETScComponent): Precision operator $\mathcal{C}^{-1}$.
+            covariance_operator (components.PETScComponent): SPDE matrix $A$.
+            sampling_factor (components.PETScComponent): Sampling factor $\widehat{\mathcal{C}}$.
+            converter (fem.FEMConverter): DoF-vertex converter.
 
         Returns:
             tuple[components.InterfaceComponent,
                   components.InterfaceComponent,
-                  components.InterfaceComponent]: _description_
+                  components.InterfaceComponent]: Wrapped interface components.
         """
         precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
         covariance_operator_interface = components.InterfaceComponent(
