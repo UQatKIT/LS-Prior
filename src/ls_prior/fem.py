@@ -42,8 +42,8 @@ def generate_forms(
 
     $$
     \begin{equation*}
-        kappa^2 tau (\phi, \phi)_{L^2(\Omega)} + tau (\nabla \phi, \nabla \phi)_{L^2(\Omega)}
-        + \beta * (\phi, \phi)_{L^2(\Omega)}
+        \kappa^2 \tau (\phi, \phi)_{L^2(\Omega)} + \tau (\nabla \phi, \nabla \phi)_{L^2(\Omega)}
+        + \beta (\phi, \phi)_{L^2(\partial\Omega)}
     \end{equation*}
     $$
 
@@ -83,7 +83,7 @@ class FEMConverter:
     with a vertex-based viewpoint. Think of it as the adapter required for the prior to
     communicate with external components. The underlying idea is that such outside components
     only see the computational mesh, and define discrete data over the vertices of that mesh
-    A `FEMConverter` object takes such data structures and inerpolates them to the provided
+    An `FEMConverter` object takes such data structures and inerpolates them to the provided
     function space. On the other hand, it can interpolate any data defined on the DoFs of the
     underlying function space onto the vertices of the mesh.
     Internally, the `FEMConverter` assigns vertex based input data to the DoFs of a P1
@@ -245,8 +245,8 @@ class FEMMatrixFactorizationAssembler:
         r"""Assemble the rectangular matrix factorization.
 
         Returns:
-            tuple[PETSc.Mat, PETSc.Mat]: PETSc Matrices $B$ and $P$ representing the
-                rectangular factorization of an FEM matrix.
+            tuple[PETSc.Mat, PETSc.Mat]: PETSc Matrices $\widehat{M}_e$ and $L$ representing
+                the rectangular factorization of an FEM matrix.
         """
         block_diagonal_matrix, dof_map_matrix = self._set_up_petsc_mats()
         self._assemble_matrices_over_cells(block_diagonal_matrix, dof_map_matrix)
@@ -289,11 +289,11 @@ class FEMMatrixFactorizationAssembler:
 
     # ----------------------------------------------------------------------------------------------
     def _set_up_petsc_mats(self) -> tuple[PETSc.Mat, PETSc.Mat]:
-        r"""Initialize the PETSc matrices $B$ and $P$for the assembly process.
+        r"""Initialize the PETSc matrices $M_e$ and $L$ for the assembly process.
 
         Returns:
-            tuple[PETSc.Mat, PETSc.Mat]: Block diagonal matrix $B$ and local-to-global
-                DoF matrix $P$.
+            tuple[PETSc.Mat, PETSc.Mat]: Empty block diagonal matrix $M_e$ and local-to-global
+                DoF matrix $L$.
         """
         block_diagonal_matrix = PETSc.Mat().createAIJ(
             [
@@ -321,7 +321,7 @@ class FEMMatrixFactorizationAssembler:
         cell_matrix: np.ndarray[tuple[int, int], np.dtype[np.float64]],
         block_diagonal_matrix: PETSc.Mat,
     ) -> None:
-        r"""Insert FEM matrix Cholesky factor of single mesh cell into block-diagonal matrix $B$.
+        r"""Insert FEM matrix Cholesky factor of single mesh cell into block-diagonal matrix $M_e$.
 
         Insertion is done in-place.
 
@@ -329,7 +329,7 @@ class FEMMatrixFactorizationAssembler:
             global_ind (np.integer): Global index of the current mesh cell.
             cell_matrix (np.ndarray[tuple[int, int], np.dtype[np.float64]]): Local cell matrix
                 contribution values.
-            block_diagonal_matrix (PETSc.Mat): Global matrix $B$ to insert into.
+            block_diagonal_matrix (PETSc.Mat): Global matrix $M_e$ to insert into.
         """
         row_col_inds = np.arange(
             global_ind * self._num_cell_dofs,
@@ -350,7 +350,7 @@ class FEMMatrixFactorizationAssembler:
         global_cell_dofs: np.ndarray[tuple[int], np.dtype[np.integer]],
         dof_map_matrix: PETSc.Mat,
     ) -> None:
-        """Insert global DoFs of a single mesh cell into local-to-global DoF matrix $P$.
+        """Insert global DoFs of a single mesh cell into local-to-global DoF matrix $L$.
 
         Insertion is done in-place.
 
@@ -358,7 +358,7 @@ class FEMMatrixFactorizationAssembler:
             global_ind (np.integer): Global index of the current mesh cell.
             global_cell_dofs (np.ndarray[tuple[int], np.dtype[np.integer]]):
                 Global indices of the DoFs in the current cell.
-            dof_map_matrix (PETSc.Mat): Local-to-global DoF matrix $P$.
+            dof_map_matrix (PETSc.Mat): Local-to-global DoF matrix $L$.
         """
         row_inds = np.arange(
             global_ind * self._num_cell_dofs,
@@ -377,15 +377,16 @@ class FEMMatrixFactorizationAssembler:
     def _assemble_matrices_over_cells(
         self, block_diagonal_matrix: PETSc.Mat, dof_map_matrix: PETSc.Mat
     ) -> None:
-        """Assemble the matrices $B$ and $P$.
+        """Assemble the matrices $M_e$ and $L$.
 
         The method loops over all cells and invokes the kernel for the local FEM matrix
         contributions. It further computes the Cholesky factor of each local matrix, and
-        inserts the result and global index mapping into the matrices $B$ and $P$, respectively.
+        inserts the result and global index mapping into the matrices $M_e$ and $L$, respectively.
 
         Args:
-            block_diagonal_matrix (PETSc.Mat): Block diagonal matrix $B$ for cell Cholesky factors.
-            dof_map_matrix (PETSc.Mat): Local-to-global DoF matrix $P$.
+            block_diagonal_matrix (PETSc.Mat): Block diagonal matrix $M_e$ for cell
+                Cholesky factors.
+            dof_map_matrix (PETSc.Mat): Local-to-global DoF matrix $L$.
         """
         local_cell_inds = np.arange(self._num_local_cells, dtype=np.int64)
         global_cell_inds = self._pproc_cell_distribution_map.local_to_global(local_cell_inds)

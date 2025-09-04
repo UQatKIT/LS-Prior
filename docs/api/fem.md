@@ -1,3 +1,3 @@
-# FEM-specific functionalilty
+# FEM-specific Functionalilty
 
 ::: ls_prior.fem

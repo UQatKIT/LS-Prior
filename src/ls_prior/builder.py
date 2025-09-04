@@ -24,8 +24,9 @@ class BilaplacianPriorSettings:
     r"""Settings for the bilaplacian prior builder.
 
     This dataclass collects all configuration options required to set up a biplaplacian prior
-    using the `BilaplacianPriorBuilder` class. The builder distributes these settings to the
-    respective components that are assembled within the builder.
+    using the [`BilaplacianPriorBuilder`][ls_prior.builder.BilaplacianPriorBuilder] class.
+    The builder distributes these settings to the respective components that are assembled within
+    the builder.
 
     Attributes:
         mesh (dlx.mesh.Mesh): Dolfinx mesh on which the prior is defined.
@@ -77,7 +78,7 @@ class BilaplacianPriorSettings:
 class BilaplacianPriorBuilder:
     r"""Builder for a Bilaplacian prior.
 
-    Specific builder fassed for a bilaplacian prior, i.e. the distribution that arises from solving
+    Specific builder class for a bilaplacian prior, i.e. the distribution that arises from solving
     the SPDE $\tau(\kappa^2 - \Delta)^2 m = W$.
 
     Methods:
@@ -119,7 +120,9 @@ class BilaplacianPriorBuilder:
         """Build the Bilaplacian prior.
 
         Internally, this method assembles all dolfinx structures, composes a hierarchy of
-        `PETScComponents`, wraps them in `InterfaceComponents` and hands them to the `Prior` class.
+        [`PETScComponents`][ls_prior.components.PETScComponent], wraps them in
+        [`InterfaceComponents`][ls_prior.components.InterfaceComponent] and hands them to the
+        [`Prior`][ls_prior.prior.Prior] class.
 
         Returns:
             prior.Prior: The constructed Bilaplacian prior.
@@ -153,7 +156,7 @@ class BilaplacianPriorBuilder:
         Returns:
             tuple[PETSc.Mat, PETSc.Mat, PETSc.Mat, fem.FEMConverter]:
                 mass matrix $M$, SPDE matrix $A$, block-diagonal matrix $\widehat{M}_w$,
-                DoF map matrix $L$, `FEMConverter` object.
+                DoF map matrix $L$, [`FEMConverter`][ls_prior.fem.FEMConverter] object.
         """
         function_space = dlx.fem.functionspace(self._mesh, self._fe_data)
         mass_matrix_form, spde_matrix_form = fem.generate_forms(
@@ -183,6 +186,7 @@ class BilaplacianPriorBuilder:
         r"""Build PETSc components for bilaplacian prior from FEM matrices.
 
         The main components for the prior are:
+
         1. Precision operator: $\mathcal{C}^{-1} = A M^{-1} A$
         2. Covariance operator: $\mathcal{C} = A^{-1} M A^{-1}$
         3. Sampling factor: $\widehat{\mathcal{C}} = A^{-1} L^T \widehat{M}_e$

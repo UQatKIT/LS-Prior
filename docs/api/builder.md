@@ -1,3 +1,3 @@
-# Prior builder
+# Prior Builder
 
 ::: ls_prior.builder

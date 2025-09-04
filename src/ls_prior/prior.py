@@ -18,9 +18,10 @@ class Prior:
     is rather stupid. It simply utilizes objects for the (representation of) a covariance operator
     $\mathcal{C}$, its factorization $\widehat{\mathcal{C}}$, and a precision operator
     $\mathcal{C}^{-1}$. These components have to adhere to the interface prescribed by the
-    `components.InterfaceComponent` class. The necessary objects can be manually assembled and
-    be handed to the `Prior` class for maximum flexibility. On the other hand, the `builder`
-    module provides a convenient alternative for the setup of a preconfigured prior object.
+    [`InterfaceComponent`][ls_prior.components.InterfaceComponent] class. The necessary objects can
+    be manually assembled and be handed to the `Prior` class for maximum flexibility.
+    On the other hand, the [`builder`][ls_prior.builder] module provides a convenient alternative
+    for the setup of a preconfigured prior object.
 
     Methods:
         evaluate_cost: Evaluate the cost/negative log-probability for a given parameter vector.

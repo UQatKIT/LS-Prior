@@ -94,12 +94,12 @@ class PETScComponent(ABC):
 
 # ==================================================================================================
 class PETScComponentComposition(PETScComponent):
-    """Composition of variable number of PETSc components.
+    r"""Composition of variable number of PETSc components.
 
     The operators we require for the prior, namely covariance, precision and sampling factor,
     are compositions of several simpler, matrix-like components. This class provides the
     functionality to combine an arbitrary number of PETSc components into a new, composite
-    component. The idea is very simple: Given a list of components [M_1, M_2, ..., M_n], which
+    component. The idea is very simple: Given a list of components $[M_1, M_2, ..., M_n]$, which
     can be applied to a PETSc vector, the composition will apply them in the given sequence.
 
     Methods:
@@ -185,21 +185,22 @@ class PETScComponentComposition(PETScComponent):
 class InterfaceComponent:
     """Wrapper for PETSc component for numpy- and vertex-based interface.
 
-    The prior `PETScComponents` handle matrix representations and vectors in standard PETSc format.
-    To allow for a more Pythonic interface, this class wraps a given PETSc component and
-    provides methods to apply numpy arrays to the component, returning numpy arrays. These
-    arrays are also copied to avoid modification of the original underlying data structures, which
-    are handled as references only.
-    More importantly, while `PETScComponents` handle abstract matrices and vectors, these data
-    structures are initially assembled with dolfinx for an underlying function space. This means
-    the shape and ordering of these data structures corresponds to the DoFs of that underlying
-    function space. From the outside, i.e. in an inverse problem context with other components,
-    we want computations to be independent of the FEM approach taken within the prior component.
-    The idea is that all components speak the language of the computational mesh, i.e. discrete
-    functions are represented as values on mesh vertices. Therefore, this class provides the
-    ability to convert data structures between vertex-based and function space DoF-based
-    representations, using a provided `FEMConverter` object. This conversion can be switched on
-    or off for both input and output, depending on the use case.
+    The prior [`PETScComponents`][ls_prior.components.PETScComponent] handle matrix representations
+    and vectors in standard PETSc format. To allow for a more Pythonic interface, this class wraps
+    a given PETSc component and provides methods to apply numpy arrays to the component, returning
+    numpy arrays. These arrays are also copied to avoid modification of the original underlying data
+    structures, which are handled as references only.
+    More importantly, while [`PETScComponents`][ls_prior.components.PETScComponent] handle abstract
+    matrices and vectors, these data structures are initially assembled with dolfinx for an
+    underlying function space. This means the shape and ordering of these data structures
+    corresponds to the DoFs of that underlying function space. From the outside, i.e. in an
+    inverse problem context with other components, we want computations to be independent of
+    the FEM approach taken within the prior component. The idea is that all components speak
+    the language of the computational mesh, i.e. discrete functions are represented as values
+    on mesh vertices. Therefore, this class provides the ability to convert data structures
+    between vertex-based and function space DoF-based representations, using a provided
+    [`FEMConverter`][ls_prior.fem.FEMConverter] object. This conversion can be switched on or off
+    for both input and output, depending on the use case.
 
     Methods:
         apply: Apply input array to component, return result as numpy array.
@@ -245,7 +246,8 @@ class InterfaceComponent:
 
         Raises:
             ValueError: If input is not converted, check that it matches dimension of the underlying
-                PETSc component. Otherwise, the `FEMConverter` will check the dimension.
+                PETSc component. Otherwise, the [`FEMConverter`][ls_prior.fem.FEMConverter] will
+                check the dimension.
 
         Returns:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Result of the application to the
