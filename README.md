@@ -19,6 +19,12 @@ The discrete representation of prior distributions in LS-Prior on computationl m
 intended to be a more modern, modular, and flexible substitute for the prior component in the [hIPPYlib](https://hippylib.github.io/) library. In particular, it can be combined with any other component in a inverse problem workflow, without explicit reliance on the internal FEM
 representation.
 
+### Key Features
+- **Matrix-free Gaussian prior distribution via SPDE approach**
+- **FenicsX FEM backend, PETSc linear algebra and solvers**
+- **Fully MPI parallelized, fully modular**
+- **Easily embeddable into Bayesian inverse problem workflows**
+
 ## Getting Started
 
 LS-Prior is currently managed as a [Pixi](https://pixi.sh/latest/), a conda package is planned. To
@@ -31,12 +37,6 @@ in the top-level directory.
 ## Documentation
 
 The [documentation](https://uqatkit.github.io/LS-Prior/) provides further information regarding usage, technical setup and API. Alternatively, you can check out the notebooks under [`examples`](https://github.com/UQatKIT/LS-Prior/tree/main/examples)
-
-### Key Features
-- **Matrix-free Gaussian prior distribution via SPDE approach**
-- **FenicsX FEM backend, PETSc linear algebra and solvers**
-- **Fully MPI parallelized, fully modular**
-- **Easily embeddable into Bayesian inverse problem workflows**
 
 ## Acknowledgement and License
 

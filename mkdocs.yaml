@@ -113,6 +113,9 @@ extra_css:
 # -- Navigation ------------------------------------------------------------------------------------
 nav:
   - Getting Started: index.md
+  - Usage:
+      - Component Interface: usage/components.md
+      - Builder Interface: usage/builder.md
   - API Reference:
       - FEM: api/fem.md
       - Components: api/components.md
