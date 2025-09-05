@@ -402,10 +402,10 @@ class FEMMatrixFactorizationAssembler:
                 (self._num_cell_dofs, self._num_cell_dofs), dtype=PETSc.ScalarType
             )
             self._assembly_kernel(
-                ffi.from_buffer(cell_matrix),  # A - output matrix
+                ffi.cast("double *", ffi.from_buffer(cell_matrix)),  # A - output matrix
                 ffi.NULL,  # w - coefficient values (none for this form)
                 ffi.NULL,  # c - constants (none for this form)
-                ffi.from_buffer(cell_vertex_coordinates),  # coordinate_dofs
+                ffi.cast("double *", ffi.from_buffer(cell_vertex_coordinates)),  # coordinate_dofs
                 ffi.NULL,  # entity_local_index (cell integral)
                 ffi.NULL,  # cell_orientation
             )

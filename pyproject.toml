@@ -34,6 +34,7 @@ channels = ["conda-forge"]
 platforms = ["linux-64"]
 
 [tool.pixi.tasks]
+test = "pytest test"
 format = "ruff format"
 serve-docs = "mkdocs serve"
 build-docs = "mkdocs build"
@@ -44,6 +45,7 @@ pre-commit = "pre-commit install"
 pytest = ">=8.4.1,<9"
 pytest-cov = ">=6.2.1,<7"
 pytest-xdist = ">=3.8.0,<4"
+pytest-mock = ">=3.14.0,<4"
 
 [tool.pixi.feature.docs.dependencies]
 mkdocs-material = ">=9.6.18,<10"
@@ -110,6 +112,7 @@ ignore = [
   "S101",
   "TRY003",
 ]
+per-file-ignores = { "test/*" = ["ANN001", "ANN201", "D100", "D103", "D104", "INP001", "SLF001"] }
 pydocstyle.convention = "google"
 
 
