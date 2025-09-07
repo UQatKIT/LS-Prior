@@ -118,7 +118,7 @@ class FEMConverter:
     # ----------------------------------------------------------------------------------------------
     def convert_vertex_values_to_dofs(
         self, vertex_values: np.ndarray[tuple[int], np.dtype[np.float64]]
-    ) -> PETSc.Vec:
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Convert vertex based data to DoF representation.
 
         Args:
@@ -130,7 +130,7 @@ class FEMConverter:
                 on the underlying mesh.
 
         Returns:
-            PETSc.Vec: PETSc Vector containing the input data, interpolated to the required
+            np.ndarray[tuple[int], np.dtype[np.float64]]: Input data interpolated to the required
                 function space DoFs.
         """
         if not vertex_values.shape == (self.vertex_space_dim,):
@@ -138,24 +138,25 @@ class FEMConverter:
                 f"Expected vertex_values to have shape {(self.vertex_space_dim,)}, "
                 f"but got {vertex_values.shape}"
             )
-        self._vertex_function.x.array[:] = vertex_values[self._vertex_to_dof_map]
+        input_copy = vertex_values.copy()
+        self._vertex_function.x.array[:] = input_copy[self._vertex_to_dof_map]
         self._vertex_function.x.scatter_forward()
         self._dof_function.interpolate(self._vertex_function)
         assert self._dof_function.x.array.shape == (self.dof_space_dim,), (
             f"Created PETSc vector has size {self._dof_function.x.array.shape}, "
             f"but expected {(self.dof_space_dim,)}"
         )
-        return self._dof_function.x.petsc_vec
+        return self._dof_function.x.array.copy()
 
     # ----------------------------------------------------------------------------------------------
     def convert_dofs_to_vertex_values(
-        self, dof_values: PETSc.Vec
+        self, dof_values: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Convert DoF based data to vertex representation.
 
         Args:
-            dof_values (PETSc.Vec): PETSc Vector containing Data on the DoFs of the underlying
-                function space.
+            dof_values (np.ndarray[tuple[int], np.dtype[np.float64]]): Array of data defined on
+                the DoFs of the underlying function space.
 
         Raises:
             ValueError: Checks that the dimension of the input vector matches the number of DoFs
@@ -165,20 +166,21 @@ class FEMConverter:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Array of data interpolated to the vertices
                 of the underlying mesh.
         """
-        if not dof_values.getSize() == self.dof_space_dim:
+        if not dof_values.shape[0] == self.dof_space_dim:
             raise ValueError(
                 f"Expected dof_values to have size {self.dof_space_dim}, "
-                f"but got {dof_values.getSize()}"
+                f"but got {dof_values.shape[0]}"
             )
-        self._dof_function.x.array[:] = dof_values
+        input_copy = dof_values.copy()
+        self._dof_function.x.array[:] = input_copy
         self._dof_function.x.scatter_forward()
         self._vertex_function.interpolate(self._dof_function)
         assert self._vertex_function.x.array.shape == (self.vertex_space_dim,), (
-            f"Created PETSc vector has size {self._vertex_function.x.array.shape}, "
+            f"Created array has size {self._vertex_function.x.array.shape}, "
             f"but expected {(self.vertex_space_dim,)}"
         )
         vertex_values = self._vertex_function.x.array[self._dof_to_vertex_map]
-        return vertex_values
+        return vertex_values.copy()
 
 
 # ==================================================================================================

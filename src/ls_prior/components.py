@@ -183,24 +183,13 @@ class PETScComponentComposition(PETScComponent):
 
 # ==================================================================================================
 class InterfaceComponent:
-    """Wrapper for PETSc component for numpy- and vertex-based interface.
+    """Wrapper for PETSc component for numpy-based interface.
 
     The prior [`PETScComponents`][ls_prior.components.PETScComponent] handle matrix representations
     and vectors in standard PETSc format. To allow for a more Pythonic interface, this class wraps
     a given PETSc component and provides methods to apply numpy arrays to the component, returning
     numpy arrays. These arrays are also copied to avoid modification of the original underlying data
     structures, which are handled as references only.
-    More importantly, while [`PETScComponents`][ls_prior.components.PETScComponent] handle abstract
-    matrices and vectors, these data structures are initially assembled with dolfinx for an
-    underlying function space. This means the shape and ordering of these data structures
-    corresponds to the DoFs of that underlying function space. From the outside, i.e. in an
-    inverse problem context with other components, we want computations to be independent of
-    the FEM approach taken within the prior component. The idea is that all components speak
-    the language of the computational mesh, i.e. discrete functions are represented as values
-    on mesh vertices. Therefore, this class provides the ability to convert data structures
-    between vertex-based and function space DoF-based representations, using a provided
-    [`FEMConverter`][ls_prior.fem.FEMConverter] object. This conversion can be switched on or off
-    for both input and output, depending on the use case.
 
     Methods:
         apply: Apply input array to component, return result as numpy array.
@@ -213,24 +202,13 @@ class InterfaceComponent:
     def __init__(
         self,
         component: PETScComponent,
-        converter: fem.FEMConverter,
-        convert_input_from_mesh: bool = True,
-        convert_output_to_mesh: bool = True,
     ) -> None:
         """Initialize interface component.
 
         Args:
             component (PETScComponent): PETSc component to wrap.
-            converter (fem.FEMConverter): Converter object to provided vertex-based interface.
-            convert_input_from_mesh (bool, optional): Whether to convert input from vertex-based to
-                function space dof-based format before application to component. Defaults to True.
-            convert_output_to_mesh (bool, optional): Whether to convert output from function space
-                dof-based to vertex-based format after application to component. Defaults to True.
         """
         self._component = component
-        self._converter = converter
-        self._convert_input_from_mesh = convert_input_from_mesh
-        self._convert_output_to_mesh = convert_output_to_mesh
         self._input_buffer = component.create_input_vector()
         self._output_buffer = component.create_output_vector()
 
@@ -255,30 +233,10 @@ class InterfaceComponent:
                 internal state.
         """
         input_copy = input_vector.copy()
-
-        # Convert input from vertex-based to function space DoFs, if required
-        if self._convert_input_from_mesh:
-            input_petsc = self._converter.convert_vertex_values_to_dofs(input_copy)
-        else:
-            if not self._input_buffer.getSize() == input_copy.shape[0]:
-                raise ValueError(
-                    f"Input vector size {input_copy.shape[0]} does not match "
-                    f"expected size {self._input_buffer.getSize()}."
-                )
-            self._input_buffer.setArray(input_copy)
-            self._input_buffer.ghostUpdate(
-                addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD
-            )
-            input_petsc = self._input_buffer
-
-        # Apply component transformation
-        self._component.apply(input_petsc, self._output_buffer)
-
-        # Convert result from function space DoFs to vertex-based, if required
-        if self._convert_output_to_mesh:
-            output_vector = self._converter.convert_dofs_to_vertex_values(self._output_buffer)
-        else:
-            output_vector = self._output_buffer.getArray()
+        self._input_buffer.setArray(input_copy)
+        self._input_buffer.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
+        self._component.apply(self._input_buffer, self._output_buffer)
+        output_vector = self._output_buffer.getArray()
 
         return output_vector.copy()
 
@@ -287,24 +245,11 @@ class InterfaceComponent:
     def shape(self) -> tuple[int, int]:
         """Get the shape of the component.
 
-        Depending on the conversion setting, Input and output dimensions will either be vertex-
-        or function space DoF-based.
-
         Returns:
             tuple[int, int]: Input and output dimension, as a matrix this would be
                 (num_rows, num_cols).
         """
-        if self._convert_input_from_mesh:
-            input_size = self._converter.vertex_space_dim
-        else:
-            input_size = self._component.shape[1]
-
-        if self._convert_output_to_mesh:
-            output_size = self._converter.vertex_space_dim
-        else:
-            output_size = self._component.shape[0]
-
-        return output_size, input_size
+        return self._component.shape
 
 
 # ==================================================================================================
@@ -392,9 +337,9 @@ class InverseMatrixSolverSettings:
 
     solver_type: str
     preconditioner_type: str
-    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
-    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None
-    max_num_iterations: Annotated[int, Is[lambda x: x > 0]] | None
+    relative_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None = None
+    absolute_tolerance: Annotated[Real, Is[lambda x: x > 0]] | None = None
+    max_num_iterations: Annotated[int, Is[lambda x: x > 0]] | None = None
 
 
 class InverseMatrixSolver(PETScComponent):

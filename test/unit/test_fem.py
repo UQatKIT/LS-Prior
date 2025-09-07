@@ -7,7 +7,6 @@ from dolfinx.fem import petsc
 import test.conftest as config
 from ls_prior import fem
 
-# Mark all tests in this module as unit tests
 pytestmark = pytest.mark.unit
 
 
@@ -46,7 +45,7 @@ def test_fem_converter_vertex_to_dofs(
     dof_values = converter.convert_vertex_values_to_dofs(
         parametrized_fem_converter_setup.input_vertex_values
     )
-    assert np.allclose(dof_values.getArray(), parametrized_fem_converter_setup.dof_values)
+    assert np.allclose(dof_values, parametrized_fem_converter_setup.dof_values)
 
 
 # --------------------------------------------------------------------------------------------------

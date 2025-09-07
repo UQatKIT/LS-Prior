@@ -108,7 +108,7 @@ class BilaplacianPriorBuilder:
             max_num_iterations=settings.cg_max_iterations,
         )
         self._amg_solver_settings = components.InverseMatrixSolverSettings(
-            solver_type=PETSc.KSP.Type.PREONLY,
+            solver_type=PETSc.KSP.Type.CG,
             preconditioner_type=PETSc.PC.Type.GAMG,
             relative_tolerance=settings.amg_relative_tolerance,
             absolute_tolerance=settings.amg_absolute_tolerance,

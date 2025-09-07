@@ -6,7 +6,7 @@ Class:
 
 import numpy as np
 
-from . import components
+from . import components, fem
 
 
 # ==================================================================================================
@@ -39,6 +39,7 @@ class Prior:
         precision_operator: components.InterfaceComponent,
         covariance_operator: components.InterfaceComponent,
         covariance_factorization: components.InterfaceComponent,
+        fem_converter: fem.FEMConverter,
         seed: int,
     ) -> None:
         r"""Initialize Prior distribution object.
@@ -52,6 +53,8 @@ class Prior:
                 operator $\mathcal{C}$.
             covariance_factorization (components.InterfaceComponent): Representation of a
                 factorization $\widehat{\mathcal{C}}$ of the covariance operator for sampling.
+            fem_converter (components.FEMConverter): Converter object to switch between vertex-
+                and DoF-based representation of vectors.
             seed (int): Random seed for the internal random number generator.
 
         Raises:
@@ -59,11 +62,13 @@ class Prior:
             ValueError: Checks that covariance operator has the correct shape.
             ValueError: Checks that covariance factor has the correct shape.
         """
-        mean_vector_dim = mean_vector.shape[0]
+        self._fem_converter = fem_converter
+        self._mean_vector = self._fem_converter.convert_vertex_values_to_dofs(mean_vector)
+        mean_vector_dim = self._mean_vector.shape[0]
         if not precision_operator.shape == (mean_vector_dim, mean_vector_dim):
             raise ValueError(
                 f"Precision operator shape {precision_operator.shape} does not match "
-                f"the mean vector dimension {mean_vector}."
+                f"the mean vector dimension {mean_vector_dim}."
             )
         if not covariance_operator.shape == (mean_vector_dim, mean_vector_dim):
             raise ValueError(
@@ -75,7 +80,6 @@ class Prior:
                 f"Covariance factorization output dimension {covariance_factorization.shape[0]} "
                 f"does not match the mean vector dimension {mean_vector_dim}."
             )
-        self._mean_vector = mean_vector
         self._precision_operator = precision_operator
         self._covariance_operator = covariance_operator
         self._covariance_factorization = covariance_factorization
@@ -96,8 +100,9 @@ class Prior:
         Returns:
             float: cost/negative log probability
         """
-        self._check_input_dimension(parameter_vector)
-        difference_vector = parameter_vector - self._mean_vector
+        parameter_vector_dof = self._fem_converter.convert_vertex_values_to_dofs(parameter_vector)
+        self._check_input_dimension(parameter_vector_dof)
+        difference_vector = parameter_vector_dof - self._mean_vector
         cost = 0.5 * np.inner(difference_vector, self._precision_operator.apply(difference_vector))
         assert cost >= 0, f"Cost needs to be non-negative, but is {cost}."
         return cost
@@ -118,10 +123,12 @@ class Prior:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Gradient of the cost/negative
                 log-probability, given on mesh vertices.
         """
-        self._check_input_dimension(parameter_vector)
-        difference_vector = parameter_vector - self._mean_vector
-        gradient = self._precision_operator.apply(difference_vector)
-        self._check_output_dimension(gradient)
+        parameter_vector_dof = self._fem_converter.convert_vertex_values_to_dofs(parameter_vector)
+        self._check_input_dimension(parameter_vector_dof)
+        difference_vector = parameter_vector_dof - self._mean_vector
+        gradient_dof = self._precision_operator.apply(difference_vector)
+        self._check_output_dimension(gradient_dof)
+        gradient = self._fem_converter.convert_dofs_to_vertex_values(gradient_dof)
         return gradient
 
     # ----------------------------------------------------------------------------------------------
@@ -141,9 +148,13 @@ class Prior:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Hessian-vector product,
                 given on mesh vertices.
         """
-        self._check_input_dimension(direction_vector)
-        hessian_vector_product = self._precision_operator.apply(direction_vector)
-        self._check_output_dimension(hessian_vector_product)
+        direction_vector_dof = self._fem_converter.convert_vertex_values_to_dofs(direction_vector)
+        self._check_input_dimension(direction_vector_dof)
+        hessian_vector_product_dof = self._precision_operator.apply(direction_vector_dof)
+        self._check_output_dimension(hessian_vector_product_dof)
+        hessian_vector_product = self._fem_converter.convert_dofs_to_vertex_values(
+            hessian_vector_product_dof
+        )
         return hessian_vector_product
 
     # ----------------------------------------------------------------------------------------------
@@ -159,9 +170,10 @@ class Prior:
         """
         random_vector_size = self._covariance_factorization.shape[1]
         random_vector = self._prng.normal(loc=0.0, scale=1.0, size=random_vector_size)
-        sample_vector = self._covariance_factorization.apply(random_vector)
-        self._check_output_dimension(sample_vector)
-        sample_vector += self._mean_vector
+        sample_vector_dof = self._covariance_factorization.apply(random_vector)
+        self._check_output_dimension(sample_vector_dof)
+        sample_vector_dof += self._mean_vector
+        sample_vector = self._fem_converter.convert_dofs_to_vertex_values(sample_vector_dof)
         return sample_vector
 
     # ----------------------------------------------------------------------------------------------
