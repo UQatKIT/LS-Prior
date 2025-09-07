@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
+import dolfinx as dlx
 import numpy as np
 import pytest
 from petsc4py import PETSc
 
 import test.conftest as config
-from ls_prior import components, fem
+from ls_prior import builder, components, fem, prior
 
 
 # ==================================================================================================
@@ -19,6 +20,8 @@ class PriorComponentSetup:
     covariance_interface: components.InterfaceComponent
     sampling_factor_interface: components.InterfaceComponent
     fem_converter: fem.FEMConverter
+    mesh: dlx.mesh.Mesh
+    function_space: dlx.fem.FunctionSpace
 
 
 # ==================================================================================================
@@ -119,6 +122,8 @@ def bilaplacian_component_setup(
                 covariance_interface=covariance_interface,
                 sampling_factor_interface=sampling_factor_interface,
                 fem_converter=fem_converter,
+                mesh=fem_setup.mesh,
+                function_space=fem_setup.function_space,
             )
         )
 
@@ -131,3 +136,33 @@ def parametrized_bilaplacian_component_setup(
     bilaplacian_component_setup: list[PriorComponentSetup],
 ) -> PriorComponentSetup:
     return bilaplacian_component_setup[request.param]
+
+
+@pytest.fixture
+def prior_build_setup(parametrized_bilaplacian_component_setup):
+    mesh = parametrized_bilaplacian_component_setup.mesh
+    function_space = parametrized_bilaplacian_component_setup.function_space
+    mean_array = parametrized_bilaplacian_component_setup.mean_vector
+    prior_object = prior.Prior(
+        mean_array,
+        parametrized_bilaplacian_component_setup.precision_interface,
+        parametrized_bilaplacian_component_setup.covariance_interface,
+        parametrized_bilaplacian_component_setup.sampling_factor_interface,
+        parametrized_bilaplacian_component_setup.fem_converter,
+        seed=0,
+    )
+
+    builder_settings = builder.BilaplacianPriorSettings(
+        mesh,
+        mean_array,
+        kappa=1.0,
+        tau=1.0,
+        seed=0,
+        fe_data=(function_space.ufl_element().family_name, function_space.ufl_element().degree),
+        cg_relative_tolerance=1e-8,
+        amg_relative_tolerance=1e-8,
+    )
+    prior_builder = builder.BilaplacianPriorBuilder(builder_settings)
+    built_prior_object = prior_builder.build()
+
+    return prior_object, built_prior_object, mesh.geometry.x.shape[0]
