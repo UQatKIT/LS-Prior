@@ -1,3 +1,5 @@
+![CI](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-Prior/ci.yaml?label=CI)
+![Docs](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-Prior/docs.yaml?label=Docs)
 ![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FUQatKIT%2FLS-Prior%2Fmain%2Fpyproject.toml)
 ![License](https://img.shields.io/github/license/UQatKIT/LS-Prior)
 ![Beartype](https://github.com/beartype/beartype-assets/raw/main/badge/bear-ified.svg)
