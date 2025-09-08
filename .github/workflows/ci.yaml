@@ -63,7 +63,7 @@ jobs:
           locked: true
       - name: Install dependencies
         id: install-deps
-        run: pixi install --environment docs
+        run: pixi install --environment test
       - name: Run tests with Pytest
         id: run-tests
-        run: pixi run --environment docs pytest
+        run: pixi run --environment test pytest
