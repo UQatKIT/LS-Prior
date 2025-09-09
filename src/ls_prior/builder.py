@@ -244,7 +244,6 @@ class BilaplacianPriorBuilder:
             precision_operator (components.PETScComponent): Precision operator $\mathcal{C}^{-1}$.
             covariance_operator (components.PETScComponent): SPDE matrix $A$.
             sampling_factor (components.PETScComponent): Sampling factor $\widehat{\mathcal{C}}$.
-            converter (fem.FEMConverter): DoF-vertex converter.
 
         Returns:
             tuple[components.InterfaceComponent,
