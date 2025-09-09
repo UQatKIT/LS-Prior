@@ -53,7 +53,7 @@ class Prior:
                 operator $\mathcal{C}$.
             covariance_factorization (components.InterfaceComponent): Representation of a
                 factorization $\widehat{\mathcal{C}}$ of the covariance operator for sampling.
-            fem_converter (components.FEMConverter): Converter object to switch between vertex-
+            fem_converter (fem.FEMConverter): Converter object to switch between vertex-
                 and DoF-based representation of vectors.
             seed (int): Random seed for the internal random number generator.
 
@@ -162,6 +162,7 @@ class Prior:
         r"""Generate a sample from the prior measure.
 
         Computes sample in two-step procedure:
+
         1. Generate i.i.d. normal vector $\xi$ matching input dimension of $\widehat{\mathcal{C}}$.
         2. Multiply with covariance factorization $\widehat{\mathcal{C}}$ and add mean
 
