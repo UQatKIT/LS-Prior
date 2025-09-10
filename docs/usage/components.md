@@ -130,6 +130,8 @@ We represent the action of the action of the inverse matrices $\mathbf{M}^{-1}$ 
 Here we use a standard CG solver with Jacobi preconditioning for the $\mathbf{M}$-solver, and AMG preconditiong for the $\mathbf{A}$-solver,
 
 ```py
+from petsc4py import PETSc
+
 cg_solver_settings = components.InverseMatrixSolverSettings(
     solver_type=PETSc.KSP.Type.CG,
     preconditioner_type=PETSc.PC.Type.JACOBI,
@@ -245,7 +247,10 @@ sample = bilaplace_prior.generate_sample()
 ```
 
 Let us also plot the sample:
+
 ```py
+import matplotlib.pyplot as plt
+
 vertices = mesh.geometry.x
 simplices = mesh.geometry.dofmap
 
