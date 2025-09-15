@@ -19,15 +19,13 @@ import numpy as np
 from beartype.vale import Is
 from petsc4py import PETSc
 
-from . import fem
-
 
 # ==================================================================================================
 class PETScComponent(ABC):
     """ABC Interface for PETSc components.
 
     This class describes the common interface for all PETSc-based components in this package. The
-    idea is that any such components mimics the interface of a PETSc Matrix (with a more pythonic
+    idea is that any such component mimics the interface of a PETSc Matrix (with a more pythonic
     interface). Under the hood, this could be the composition of several matrices, or the
     representation of a matrix inverse through a matrix solver. This allows to easily combine
     different components in a flexible manner.
@@ -79,7 +77,7 @@ class PETScComponent(ABC):
         """
 
     def _check_dimensions(self, input_vector: PETSc.Vec, output_vector: PETSc.Vec) -> None:
-        """Checks correct dimensionalities in apply method, should be utilized in all subclasses."""
+        """Checks correct dimensionalities in `apply` method, should be utilized in subclasses."""
         if not input_vector.getSize() == self.shape[1]:
             raise ValueError(
                 f"Input vector size {input_vector.getSize()} does not match "
@@ -119,6 +117,10 @@ class PETScComponentComposition(PETScComponent):
 
         Args:
             *components (PETScComponent): Components to compose, applied in the given order.
+
+        Raises:
+            ValueError: If less than two components are given, or if the dimensions of the
+                components do not match for composition.
         """
         self._components = components
         self._num_components = len(components)
@@ -220,20 +222,22 @@ class InterfaceComponent:
 
         Args:
             input_vector (np.ndarray[tuple[int], np.dtype[np.float64]]): Input vector
-                to apply to component. Input will be copied to avoid modification of original array.
+                to apply to component.
 
         Raises:
-            ValueError: If input is not converted, check that it matches dimension of the underlying
-                PETSc component. Otherwise, the [`FEMConverter`][ls_prior.fem.FEMConverter] will
-                check the dimension.
+            ValueError: If input vector does not have correct shape.
 
         Returns:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Result of the application to the
                 underlying component. Will be copied from internal buffer to avoid modification of
                 internal state.
         """
-        input_copy = input_vector.copy()
-        self._input_buffer.setArray(input_copy)
+        if not input_vector.shape == (self.shape[1],):
+            raise ValueError(
+                f"Input vector shape {input_vector.shape} does not match expected shape "
+                f"({self.shape[1]},)."
+            )
+        self._input_buffer.setArray(input_vector)
         self._input_buffer.ghostUpdate(addv=PETSc.InsertMode.INSERT, mode=PETSc.ScatterMode.FORWARD)
         self._component.apply(self._input_buffer, self._output_buffer)
         output_vector = self._output_buffer.getArray()
@@ -323,7 +327,7 @@ class Matrix(PETScComponent):
 class InverseMatrixSolverSettings:
     r"""Settings for the inverse matrix representation via Krylov subspace solver.
 
-    All combinations of solvers and preconditioners provided by PETSc are supported. It is the
+    All combinations of solvers and preconditioners provided in PETSc are supported. It is the
     user's responsibility to choose a suitable combination.
 
     Attributes:

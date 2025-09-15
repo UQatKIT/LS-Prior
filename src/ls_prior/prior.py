@@ -33,7 +33,7 @@ class Prior:
     """
 
     # ----------------------------------------------------------------------------------------------
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         mean_vector: np.ndarray[tuple[int], np.dtype[np.float64]],
         precision_operator: components.InterfaceComponent,
