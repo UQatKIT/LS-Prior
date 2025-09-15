@@ -39,7 +39,7 @@ pre-configured prior distributions using LS-Prior's builder module.
 
 #### API Reference
 
-The API reference contains detailed explanations of all software components of Eikonax, and how to use them.
+The API reference contains detailed explanations of all software components of LS-Prior, and how to use them.
 
 #### Examples
 

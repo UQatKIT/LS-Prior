@@ -1,10 +1,10 @@
 # Component Interface
 
-The goal of this tutorial is to demonstrate the highly modular component interface of the `LS-Prior` package. This low-level interface is not the most convenient way to construct prior distributions, but it is exremely flexible with respect to future extensions. In addition, it helps understanding the underlying structure of the package, and the mathematical approach it is based on.
+The goal of this tutorial is to demonstrate the highly modular component interface of the `LS-Prior` package. This low-level interface is not the most convenient way to construct prior distributions, but it is extremely flexible with respect to user-defined extensions. In addition, it helps understanding the underlying structure of the package, and the mathematical approach it is based on.
 
 ## Mesh Setup
 
-`LS-Prior` helps with the generation of prior distributions for function space objects, i.e. functions defined on some domain $\Omega$, which might either be Euclidean, or an embedded manifold, with topological dimension $d$. The most important input for the construction of a prior distribution is therefore a computational mesh resembling the discretization of $\Omega$. `LS-Prior` requires input meshes in [DOLFINx](https://docs.fenicsproject.org/dolfinx/main/python/generated/dolfinx.mesh.html) format. Such meshes can easily be obtained from other common mesh formats, such as [GMSH](https://gmsh.info/).
+`LS-Prior` deals with the generation of prior distributions for function space objects, i.e. functions defined on some domain $\Omega$, which might either be Euclidean, or an embedded manifold, with topological dimension $d$. The most important input for the construction of a prior distribution is therefore a computational mesh resembling the discretization of $\Omega$. `LS-Prior` requires input meshes in [DOLFINx](https://docs.fenicsproject.org/dolfinx/main/python/generated/dolfinx.mesh.html) format. Such meshes can easily be obtained from other common mesh formats, such as [GMSH](https://gmsh.info/).
 
 We set up a simple square mesh with `DOLFINx` for now:
 
@@ -22,7 +22,7 @@ mesh = dlx.mesh.create_rectangle(
 ```
 
 Note that we have also passed an MPI communicator to the mesh. This communicator will be utilized by all components of `LS-Prior` for MPI-parallel computations.
-Furthermore, while internal computations are performed on some finite element space (to be defined), the interface of prior objects work entirely via vectors defined on the vertices of the provided mesh. This makes it easy to interface prior objects with other components in an inverse problem workflow, without relying on the specific finite element backend.
+Furthermore, while internal computations are performed on some finite element space (to be defined), the interface of prior objects work entirely via vectors defined on the vertices of the provided mesh. This makes it easy to interface prior objects with other components in an inverse problem workflow, without relying on the specific finite element representation.
 
 ## FEM Matrix and Converter Setup
 
@@ -34,7 +34,7 @@ $$
 \end{equation*}
 $$
 
-where $\kappa,\tau > 0$ are parameters determining the variance and correlation properties of the realizations, $\nu > \frac{d}{2}$ determines their regularity, and W is spatial white noise on $\Omega$. In `LS-Prior`, qe can equip the SPDE either with homogneous Neumann boundary conditions,
+where $\kappa,\tau > 0$ are parameters determining the variance and correlation properties of the realizations, $\nu > \frac{d}{2}$ determines their regularity, and $W$ is spatial white noise on $\Omega$. In `LS-Prior`, we can equip the SPDE either with homogneous Neumann boundary conditions,
 
 $$
 \begin{equation*}
@@ -61,9 +61,24 @@ $$
 \end{equation*}
 $$
 
-To recover Neumann boundary conditions, we can simply set $\beta=0$. In particular, we are interested in the left-hand-side operator $\mathcal{A}$, and the "mass matrix operator" $\mathcal{M}$ corresponding to the form $(m,\varphi)_{L^2(\Omega)}$
+To recover Neumann boundary conditions, we can simply set $\beta=0$. In particular, we are interested in the left-hand-side operator
+$\mathcal{A}$ defined via
 
-These operators can be discretized on some finite-dimensional subspace $V_h$ in a standard finite element procedure. We do this with `DOLFINx` by first calling the [`generate_forms`][ls_prior.fem.generate_forms] method,
+$$
+\begin{equation*}
+    \mathcal{A}m = \kappa^2\tau(m,\varphi)_{L^2(\Omega)} + \tau (\nabla m,\nabla\varphi)_{L^2(\Omega)} + \beta(m,\varphi)_{L^2(\partial\Omega)},
+\end{equation*}
+$$
+
+and the "mass matrix operator" $\mathcal{M}$ defined via
+ 
+$$
+\begin{equation*}
+    \mathcal{M}m = (m,\varphi)_{L^2(\Omega)}
+\end{equation*}
+$$
+
+These operators can be discretized on some finite-dimensional subspace $V_h$ according to standard finite element procedure. We do this with `DOLFINx` by first calling the [`generate_forms`][ls_prior.fem.generate_forms] method,
 
 ```py
 from ls_prior import fem
@@ -89,7 +104,7 @@ spde_matrix.assemble()
     M$ and $\mathbf
     A$ under the premise that $\nu=2$. These matrices can be used, however, as building blocks for fields of other orders $\nu$ as well.
 
-To generate samples from a prior distribution, we will further require a factorization of $\mathbf{M}$, i.e. a matrix $\widehat{\mathbf{M}}$ such that $\widehat{\mathbf{M}}\widehat{\mathbf{M}}^T$. Such a factorization can be constructed efficinetly and in sparse form, exploiting the standard finite element assembly procedure. `LS-Prior` provides the functionality for the construction of a factorization for FEM matrices in the [`FEMMatrixFactorizationAssembler`][ls_prior.fem.FEMMatrixFactorizationAssembler] class:
+To generate samples from a prior distribution, we will further require a factorization of $\mathbf{M}$, i.e. a matrix $\widehat{\mathbf{M}}$ such that $\widehat{\mathbf{M}}\widehat{\mathbf{M}}^T$. Such a factorization can be constructed efficiently and in sparse form, exploiting the finite element assembly procedure. `LS-Prior` provides the functionality for the construction of a factorization for FEM matrices in the [`FEMMatrixFactorizationAssembler`][ls_prior.fem.FEMMatrixFactorizationAssembler] class:
 
 ```py
 mass_matrix_factorization = fem.FEMMatrixFactorizationAssembler(
@@ -99,7 +114,7 @@ block_diagonal_matrix, dof_map_matrix = mass_matrix_factorization.assemble()
 dof_map_matrix.transpose()
 ```
 
-Given the mesh, the FE function space, and a weak form, the factorization assemble returns two sparse `PETSc` matrices $\widehat{\mathbf{M}}_e$ and $\mathbf{L}$, such that $\widehat{\mathbf{M}} = \mathbf{L}^T\widehat{\mathbf{M}}_e$. For more detailed information on these matrices, we refer to the [class documentation][ls_prior.fem.FEMMatrixFactorizationAssembler].
+Given the mesh, the FE function space, and a weak form, the factorization assembler generates two sparse `PETSc` matrices $\widehat{\mathbf{M}}_e$ and $\mathbf{L}$, such that $\widehat{\mathbf{M}} = \mathbf{L}^T\widehat{\mathbf{M}}_e$. For more detailed information on these matrices, we refer to the [class documentation][ls_prior.fem.FEMMatrixFactorizationAssembler].
 
 Lastly, we initialize a [`FEMConverter`][ls_prior.fem.FEMConverter] object,
 
@@ -112,9 +127,9 @@ The converter will take care of the conversion between vectors defined on mesh v
 
 ## Basic Components
 
-Given the underlying FEM matrices, we can start climbing up the `LS-Prior` component hierarchy. All components we will use to construct the prior adhere to [`PETScComponent`][ls_prior.components.PETScComponent] interface. This uniform interface allows for the arbitrary composition of PETSc components, resulting in new such components.
+Given the underlying FEM matrices, we can start climbing up the `LS-Prior` component hierarchy. All components we will use to construct the prior adhere to the [`PETScComponent`][ls_prior.components.PETScComponent] interface. This uniform interface allows for the arbitrary composition of PETSc components, resulting in new such components.
 
-In a first step, we initialize the components that resemble the action of the matrices $\mathbf{M}$ and $\mathbf{A}$, as well as their inverses $\mathbf{M}^{-1}$ and $\mathbf{A}^{-1}$ on vectors of matching size The matrices $\mathbf{M}$, $\mathbf{A}$, $\widehat{\mathbf{M}}_e$, and $\mathbf{L}$ are used to initialize [`Matrix`][ls_prior.components.Matrix] components,
+In a first step, we initialize the components that resemble the action of the FEM matrices, as well as their inverses on vectors of matching size The matrices $\mathbf{M}$, $\mathbf{A}$, $\widehat{\mathbf{M}}_e$, and $\mathbf{L}$ are used to initialize [`Matrix`][ls_prior.components.Matrix] components,
 
 ```py
 mass_matrix_component = components.Matrix(mass_matrix)
@@ -125,7 +140,7 @@ dof_map_matrix_component = components.Matrix(dof_map_matrix)
 
 These are just thin wrappers around the standard `PETSc` matrix interface.
 
-We represent the action of the action of the inverse matrices $\mathbf{M}^{-1}$ and $\mathbf{A}^{-1}$ via [`InverseMatrixSolver`][ls_prior.components.InverseMatrixSolver] components. Under the hood, these components use `PETSc`'s [Krylov subspace solvers](https://petsc.org/release/petsc4py/reference/petsc4py.PETSc.KSP.html) and [preconditioners](https://petsc.org/release/petsc4py/reference/petsc4py.PETSc.PC.html) for matrix-free inversion of the provided input matrices. Next to the system matrix to invert, these components have to be initialized with an [`InverseMatrixSolverSettings`][ls_prior.components.InverseMatrixSolverSettings] data class for configuration of the solver and preconditioner.
+Next, we represent the action of the inverse matrices $\mathbf{M}^{-1}$ and $\mathbf{A}^{-1}$ via [`InverseMatrixSolver`][ls_prior.components.InverseMatrixSolver] components. Under the hood, these components use `PETSc`'s [Krylov subspace solvers](https://petsc.org/release/petsc4py/reference/petsc4py.PETSc.KSP.html) and [preconditioners](https://petsc.org/release/petsc4py/reference/petsc4py.PETSc.PC.html) for matrix-free inversion of the provided input matrices. Next to the system matrix to invert, these components have to be initialized with an [`InverseMatrixSolverSettings`][ls_prior.components.InverseMatrixSolverSettings] data class for configuration of the solver and preconditioner.
 
 Here we use a standard CG solver with Jacobi preconditioning for the $\mathbf{M}$-solver, and AMG preconditiong for the $\mathbf{A}$-solver,
 
@@ -156,7 +171,7 @@ spde_matrix_inverse_component = components.InverseMatrixSolver(amg_solver_settin
 
 As mentioned earlier, we can combine arbitrary [`PETScComponents`][ls_prior.components.PETScComponent] into new ones, relying on the [`PETScComponentComposition`][ls_prior.components.PETScComponentComposition] class. Objects of this type simply chain calls to all sub-components they comprise, in the order they have been provided. This means we could chain covariance operators for arbitrary, also fractional order, e.g. by using a spectral decomposition algorithm on the basic components, and wrapping it in another [`PETScComponents`][ls_prior.components.PETScComponent].
 
-We again focus on the case $\nu=2$, i.e. the Bilaplace For the Bilaplace prior, the discrete covariance and precision matrices are given as
+We again focus on the case $\nu=2$, i.e. the Bilaplace prior. The discrete covariance and precision matrices are then given as
 
 $$
 \begin{gather*}

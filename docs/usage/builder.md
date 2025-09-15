@@ -24,10 +24,9 @@ mesh, *_ = dlx.io.gmshio.read_from_msh("left_atrium_surface.msh", mpi_communicat
 ## Builder Configuration
 
 Given our `DOLFINx` mesh, we construct a [`Prior`][ls_prior.prior.Prior] object with `LS-Prior`'s
-builder component. As of now, we support building Bilaplace priors (see the [components](./components.md))
-tutorial for an explanation. To configure the builder, we set up a [`BilaplacianPriorSettings`][ls_prior.builder.BilaplacianPriorSettings] data class. As mandatory settings, the configuration class requires the
-mesh, a mean vector defined on the mesh's vertices, the parameters $\tau$ and $\kappa$ of the prior,
-and a `DOLFINx` identifier for the FE function space we want to construct:
+builder component. As of now, we support building Bilaplace priors (see the [components](./components.md)
+tutorial for an explanation). To configure the builder, we set up a [`BilaplacianPriorSettings`][ls_prior.builder.BilaplacianPriorSettings] data class. As mandatory settings, the configuration class requires the
+mesh, a mean vector defined on the mesh's vertices, and the parameters $\tau$ and $\kappa$ of the prior:
 
 ```py
 prior_settings = builder.BilaplacianPriorSettings(
@@ -35,7 +34,6 @@ prior_settings = builder.BilaplacianPriorSettings(
     mean_vector=np.zeros(mesh.geometry.x.shape[0]),
     kappa=0.5,
     tau=1,
-    fe_data=("Lagrange", 2),
 )
 ```
 
