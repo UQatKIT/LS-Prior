@@ -211,3 +211,6 @@ __marimo__/
 
 # Notebooks
 development.ipynb
+
+# Built conda package
+*.conda

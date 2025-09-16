@@ -1,10 +1,12 @@
 [project]
-authors = [{name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu"}]
-maintainers = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+authors = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+maintainers = [
+  { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
+]
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
 requires-python = ">= 3.13"
-dynamic = ["version"]
+version = "0.3.1"
 readme = "README.md"
 license = { text = "MIT" }
 keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx"]
@@ -28,18 +30,6 @@ scifem = ">=0.7.0,<0.8"
 
 [tool.pixi.pypi-dependencies]
 ls_prior = { path = ".", editable = true }
-
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-platforms = ["linux-64"]
-
-[tool.pixi.tasks]
-test = "pytest test"
-format = "ruff format"
-serve-docs = "mkdocs serve"
-build-docs = "mkdocs build"
-changelog = "git-cliff"
-pre-commit = "pre-commit install"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.4.1,<9"
@@ -76,16 +66,49 @@ dev = { features = ["dev"], solve-group = "default" }
 examples = { features = ["examples"], solve-group = "default" }
 test = { features = ["dev", "test"], solve-group = "default" }
 docs = { features = ["dev", "docs"], solve-group = "default" }
-all = { features = ["dev", "docs", "examples", "test"], solve-group = "default" }
+all = { features = [
+  "dev",
+  "docs",
+  "examples",
+  "test",
+], solve-group = "default" }
 
 
 # --------------------------------------------------------------------------------------------------
 [build-system]
 build-backend = "hatchling.build"
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 
-[tool.hatch.version]
-source = "vcs"
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+preview = ["pixi-build"]
+
+[tool.pixi.package.build]
+backend = { name = "pixi-build-python", version = "*", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[tool.pixi.package.host-dependencies]
+uv = "*"
+git = "*"
+hatchling = "*"
+
+[tool.pixi.package.run-dependencies]
+numpy = ">=2.2,<3"
+fenics-dolfinx = ">=0.9.0,<0.10"
+mpich = ">=4.3.1,<5"
+beartype = ">=0.21.0,<0.22"
+scifem = ">=0.7.0,<0.8"
+
+# --------------------------------------------------------------------------------------------------
+[tool.pixi.tasks]
+test = "pytest test"
+format = "ruff format"
+serve-docs = "mkdocs serve"
+build-docs = "mkdocs build"
+changelog = "git-cliff"
+pre-commit = "pre-commit install"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -112,7 +135,15 @@ ignore = [
   "S101",
   "TRY003",
 ]
-per-file-ignores = { "test/*" = ["ANN001", "ANN201", "D100", "D103", "D104", "INP001", "SLF001"] }
+per-file-ignores = { "test/*" = [
+  "ANN001",
+  "ANN201",
+  "D100",
+  "D103",
+  "D104",
+  "INP001",
+  "SLF001",
+] }
 pydocstyle.convention = "google"
 
 
