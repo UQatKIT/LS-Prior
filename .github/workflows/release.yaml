@@ -1,5 +1,5 @@
 name: Release
-run-name: Create Github release from tagged commit
+run-name: Create Github and Prefix release from tagged commit
 
 # -- Trigger Events --------------------------------------------------------------------------------
 on:
@@ -34,14 +34,7 @@ jobs:
           locked: true
       - name: Install dependencies
         id: install-deps
-        run: pixi install -e all
-      - name: fetch tags
-        id: fetch-tags
-        run: git fetch --tags
-      - name: Bump version
-        id: bump-version
-        run: |
-          pixi run -e all toml set --toml-path pyproject.toml project.version $(git describe --tags --abbrev=0)
+        run: pixi install -e docs
       - name: Create changelog
         id: create-changelog
         run: pixi run -e docs changelog --latest --strip all --output ${{ github.workspace }}/changelog.md

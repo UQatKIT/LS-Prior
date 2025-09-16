@@ -6,7 +6,7 @@ maintainers = [
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
 requires-python = ">= 3.13"
-version = "v0.4.4"
+version = "v0.4.6"
 readme = "README.md"
 license = { text = "MIT" }
 keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx"]
@@ -113,6 +113,10 @@ serve-docs = "mkdocs serve"
 build-docs = "mkdocs build"
 changelog = "git-cliff"
 pre-commit = "pre-commit install"
+
+[tool.pixi.tasks.bump-version]
+args = ["version"]
+cmd = "toml set --toml-path pyproject.toml project.version {{version}} && git tag {{version}}"
 
 
 # --------------------------------------------------------------------------------------------------
