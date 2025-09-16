@@ -67,7 +67,7 @@ jobs:
         run: pixi build
       - name: Install rattler-build
         id: install-rattler-build
-        run: pixi install rattler-build
+        run: pixi global install rattler-build
       - name: Publish package
         id: publish-package
         run: |
