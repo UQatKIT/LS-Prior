@@ -71,7 +71,7 @@ jobs:
       - name: Publish package
         id: publish-package
         run: |
-          for pkg in $(find output -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
+          for pkg in $(find . -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
             echo "Uploading ${pkg}"
-            rattler-build upload prefix -c my-channel "${pkg}"
+            rattler-build upload prefix -c kruse-forge "${pkg}"
           done
