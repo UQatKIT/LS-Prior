@@ -75,5 +75,7 @@ jobs:
         run: |
           for pkg in $(find . -type f \( -name "*.conda" -o -name "*.tar.bz2" \) ); do
             echo "Uploading ${pkg}"
-            rattler-build upload prefix -c kruse-forge "${pkg}" --api-key=${{ secrets.PREFIX_API_KEY }}
+            rattler-build upload prefix -c kruse-forge "${pkg}" --api-key="${PREFIX_API_KEY}"
           done
+        env:
+          PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
