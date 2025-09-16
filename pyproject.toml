@@ -6,7 +6,7 @@ maintainers = [
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
 requires-python = ">= 3.13"
-version = "v0.4.9"
+version = "v0.4.10"
 readme = "README.md"
 license = {text = "MIT"}
 keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx"]
