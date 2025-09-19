@@ -1,6 +1,9 @@
 import numpy as np
+import pytest
 
 from ls_prior import prior
+
+pytestmark = pytest.mark.unit
 
 
 # ==================================================================================================

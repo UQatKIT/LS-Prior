@@ -3,7 +3,7 @@
 Classes:
     PETScComponent: ABC interface for PETSc-based components.
     PETScComponentComposition: Composition of variable number of PETSc components.
-    InterfaceComponent: Wrapper for PETSc component for numpy- and vertex-based interface.
+    InterfaceComponent: Wrapper for PETSc component for numpy-based interface.
     Matrix: Simple PETSc matrix wrapper.
     InverseMatrixSolverSettings: Settings for the inverse matrix representation via Krylov
         subspace solver.
