@@ -24,6 +24,7 @@ def test_matrix_component(
     assert np.allclose(output_vector.getArray(), expected_output)
 
 
+# --------------------------------------------------------------------------------------------------
 def test_inverse_cg_solver_component(
     parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
 ):
@@ -46,6 +47,7 @@ def test_inverse_cg_solver_component(
     assert np.allclose(output_vector.getArray(), expected_output)
 
 
+# --------------------------------------------------------------------------------------------------
 def test_inverse_amg_solver_component(
     parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
 ):

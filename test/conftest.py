@@ -16,25 +16,9 @@ FEM_CONVERTER_DATA = "test/data/fem_converter_vectors.npz"
 
 # ==================================================================================================
 @dataclass
-class FEMSpaceSetup:
-    mesh: dlx.mesh.Mesh
-    function_space: dlx.fem.FunctionSpace
-
-
-@dataclass
 class PrecomputedAssemblyMatrices:
     mass_matrix: np.ndarray
     spde_matrix: np.ndarray
-
-
-@dataclass
-class PrecomputedMatrixRepresentation:
-    mass_matrix_array: np.ndarray
-    spde_matrix_array: np.ndarray
-    mass_matrix_petsc: PETSc.Mat
-    spde_matrix_petsc: PETSc.Mat
-    input_array: np.ndarray
-    input_vector: PETSc.Vec
 
 
 @dataclass
@@ -44,29 +28,45 @@ class PrecomputedConverterVectors:
     output_vertex_values: np.ndarray
 
 
+# ==================================================================================================
+@dataclass
+class FEMSpaceSetup:
+    mesh: dlx.mesh.Mesh
+    function_space: dlx.fem.FunctionSpace
+
+
 @dataclass
 class MatrixAssemblySetup:
     function_space: dlx.fem.FunctionSpace
     kappa: float
     tau: float
     robin_const: float
-    mass_matrix: np.ndarray
-    spde_matrix: np.ndarray
+    expected_mass_matrix: np.ndarray
+    expected_spde_matrix: np.ndarray
 
 
 @dataclass
 class FEMConverterSetup:
     function_space: dlx.fem.FunctionSpace
     input_vertex_values: np.ndarray
-    dof_values: PETSc.Vec
-    output_vertex_values: np.ndarray
+    expected_dof_values: PETSc.Vec
+    expected_output_vertex_values: np.ndarray
 
 
 @dataclass
 class FactorizationAssemblerSetup:
-    mesh: dlx.mesh.Mesh
-    function_space: dlx.fem.FunctionSpace
-    mass_matrix: np.ndarray
+    fem_setup: FEMSpaceSetup
+    expected_mass_matrix: np.ndarray
+
+
+@dataclass
+class MatrixComponentSetup:
+    mass_matrix_array: np.ndarray
+    spde_matrix_array: np.ndarray
+    mass_matrix_petsc: PETSc.Mat
+    spde_matrix_petsc: PETSc.Mat
+    input_array: np.ndarray
+    input_vector: PETSc.Vec
 
 
 # ==================================================================================================
@@ -92,26 +92,9 @@ def cg2_space(mesh: dlx.mesh.Mesh) -> dlx.fem.FunctionSpace:
     return dlx.fem.functionspace(mesh, ("Lagrange", 2))
 
 
-@pytest.fixture(scope="session")
-def fem_setup_combinations() -> list[FEMSpaceSetup]:
-    mesh_1d = unit_interval_mesh()
-    mesh_2d = unit_square_mesh()
-    fs_1d_cg1 = cg1_space(mesh_1d)
-    fs_1d_cg2 = cg2_space(mesh_1d)
-    fs_2d_cg1 = cg1_space(mesh_2d)
-    fs_2d_cg2 = cg2_space(mesh_2d)
-    return [
-        FEMSpaceSetup(mesh_1d, fs_1d_cg1),
-        FEMSpaceSetup(mesh_1d, fs_1d_cg2),
-        FEMSpaceSetup(mesh_2d, fs_2d_cg1),
-        FEMSpaceSetup(mesh_2d, fs_2d_cg2),
-    ]
-
-
 # ==================================================================================================
 @pytest.fixture(scope="session")
 def precomputed_assembly_matrices() -> list[PrecomputedAssemblyMatrices]:
-    """Precomputed mass and SPDE matrices for validation."""
     fem_matrices = np.load(FEM_MATRIX_DATA)
 
     mass_matrix_1d_cg1 = fem_matrices["mass_matrix_1d_cg1"]
@@ -131,6 +114,7 @@ def precomputed_assembly_matrices() -> list[PrecomputedAssemblyMatrices]:
     ]
 
 
+# --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def precomputed_converter_vectors() -> list[PrecomputedConverterVectors]:
     femconverter_vectors = np.load(FEM_CONVERTER_DATA)
@@ -156,16 +140,32 @@ def precomputed_converter_vectors() -> list[PrecomputedConverterVectors]:
 
 # ==================================================================================================
 @pytest.fixture(scope="session")
+def fem_setup_combinations() -> list[FEMSpaceSetup]:
+    mesh_1d = unit_interval_mesh()
+    mesh_2d = unit_square_mesh()
+    fs_1d_cg1 = cg1_space(mesh_1d)
+    fs_1d_cg2 = cg2_space(mesh_1d)
+    fs_2d_cg1 = cg1_space(mesh_2d)
+    fs_2d_cg2 = cg2_space(mesh_2d)
+    return [
+        FEMSpaceSetup(mesh_1d, fs_1d_cg1),
+        FEMSpaceSetup(mesh_1d, fs_1d_cg2),
+        FEMSpaceSetup(mesh_2d, fs_2d_cg1),
+        FEMSpaceSetup(mesh_2d, fs_2d_cg2),
+    ]
+
+
+# --------------------------------------------------------------------------------------------------
+@pytest.fixture(scope="session")
 def matrix_assembly_setups(
     fem_setup_combinations: list[FEMSpaceSetup],
     precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices],
 ) -> list[MatrixAssemblySetup]:
-    """Combine FEM setups with precomputed matrices for testing."""
     kappa = 1.0
     tau = 1.0
     robin_const = None
     setups = []
-    for fem_setup, expected_results in zip(
+    for fem_setup, precomputed_results in zip(
         fem_setup_combinations, precomputed_assembly_matrices, strict=True
     ):
         setups.append(
@@ -174,52 +174,54 @@ def matrix_assembly_setups(
                 kappa=kappa,
                 tau=tau,
                 robin_const=robin_const,
-                mass_matrix=expected_results.mass_matrix,
-                spde_matrix=expected_results.spde_matrix,
+                expected_mass_matrix=precomputed_results.mass_matrix,
+                expected_spde_matrix=precomputed_results.spde_matrix,
             )
         )
     return setups
 
 
+# --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def fem_converter_setups(
     fem_setup_combinations: list[FEMSpaceSetup],
     precomputed_converter_vectors: list[PrecomputedConverterVectors],
 ) -> list[FEMConverterSetup]:
     setups = []
-    for fem_setup, expected_results in zip(
+    for fem_setup, precomputed_results in zip(
         fem_setup_combinations, precomputed_converter_vectors, strict=True
     ):
         setups.append(
             FEMConverterSetup(
                 function_space=fem_setup.function_space,
-                input_vertex_values=expected_results.input_vertex_values,
-                dof_values=expected_results.dof_values,
-                output_vertex_values=expected_results.output_vertex_values,
+                input_vertex_values=precomputed_results.input_vertex_values,
+                expected_dof_values=precomputed_results.dof_values,
+                expected_output_vertex_values=precomputed_results.output_vertex_values,
             )
         )
     return setups
 
 
+# --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def factorization_assembler_setups(
     fem_setup_combinations: list[FEMSpaceSetup],
     precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices],
 ) -> list[FactorizationAssemblerSetup]:
     setups = []
-    for fem_setup, expected_results in zip(
+    for fem_setup, precomputed_results in zip(
         fem_setup_combinations, precomputed_assembly_matrices, strict=True
     ):
         setups.append(
             FactorizationAssemblerSetup(
-                mesh=fem_setup.mesh,
-                function_space=fem_setup.function_space,
-                mass_matrix=expected_results.mass_matrix,
+                fem_setup=fem_setup,
+                expected_mass_matrix=precomputed_results.expected_mass_matrix,
             )
         )
     return setups
 
 
+# --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def matrix_component_setup(precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices]):
     matrix_representations = []
@@ -246,7 +248,7 @@ def matrix_component_setup(precomputed_assembly_matrices: list[PrecomputedAssemb
 
         input_array = rng.random(array.shape[1])
         input_vector = PETSc.Vec().createWithArray(input_array, comm=MPI_COMMUNICATOR)
-        matrix_representation = PrecomputedMatrixRepresentation(
+        matrix_representation = MatrixComponentSetup(
             mass_matrix_array,
             spde_matrix_array,
             mass_matrix_petsc,
@@ -285,6 +287,6 @@ def parametrized_factorization_assembler_setup(
 @pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
 def parametrized_matrix_representation(
     request: pytest.FixtureRequest,
-    matrix_component_setup: list[PrecomputedMatrixRepresentation],
-) -> PrecomputedMatrixRepresentation:
+    matrix_component_setup: list[MatrixComponentSetup],
+) -> MatrixComponentSetup:
     return matrix_component_setup[request.param]

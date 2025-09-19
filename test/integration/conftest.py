@@ -43,7 +43,7 @@ def compute_covariance_cholesky_factor(
     return cholesky_factor, cholesky_factor_petsc
 
 
-def set_up_components(mass_matrix_petsc, spde_matrix_petsc, sampling_factor_petsc, converter):
+def set_up_components(mass_matrix_petsc, spde_matrix_petsc, sampling_factor_petsc):
     cg_solver_settings = components.InverseMatrixSolverSettings(
         solver_type=PETSc.KSP.Type.CG,
         preconditioner_type=PETSc.PC.Type.JACOBI,
