@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from petsc4py import PETSc
 
-import test.conftest as config
+import test.conftest as main_config
 
 
 # ==================================================================================================
@@ -29,15 +29,15 @@ class FEMConverterSetup:
 
 @dataclass
 class FactorizationAssemblerSetup:
-    fem_setup: config.FEMSpaceSetup
+    fem_setup: main_config.FEMSpaceSetup
     expected_mass_matrix: np.ndarray
 
 
 # ==================================================================================================
 @pytest.fixture(scope="session")
 def matrix_assembly_setups(
-    fem_setup_combinations: list[config.FEMSpaceSetup],
-    precomputed_assembly_matrices: list[config.PrecomputedAssemblyMatrices],
+    fem_setup_combinations: list[main_config.FEMSpaceSetup],
+    precomputed_assembly_matrices: list[main_config.PrecomputedAssemblyMatrices],
 ) -> list[MatrixAssemblySetup]:
     kappa = 1.0
     tau = 1.0
@@ -62,8 +62,8 @@ def matrix_assembly_setups(
 # --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def fem_converter_setups(
-    fem_setup_combinations: list[config.FEMSpaceSetup],
-    precomputed_converter_vectors: list[config.PrecomputedConverterVectors],
+    fem_setup_combinations: list[main_config.FEMSpaceSetup],
+    precomputed_converter_vectors: list[main_config.PrecomputedConverterVectors],
 ) -> list[FEMConverterSetup]:
     setups = []
     for fem_setup, precomputed_results in zip(
@@ -83,8 +83,8 @@ def fem_converter_setups(
 # --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
 def factorization_assembler_setups(
-    fem_setup_combinations: list[config.FEMSpaceSetup],
-    precomputed_assembly_matrices: list[config.PrecomputedAssemblyMatrices],
+    fem_setup_combinations: list[main_config.FEMSpaceSetup],
+    precomputed_assembly_matrices: list[main_config.PrecomputedAssemblyMatrices],
 ) -> list[FactorizationAssemblerSetup]:
     setups = []
     for fem_setup, precomputed_results in zip(
@@ -93,28 +93,28 @@ def factorization_assembler_setups(
         setups.append(
             FactorizationAssemblerSetup(
                 fem_setup=fem_setup,
-                expected_mass_matrix=precomputed_results.expected_mass_matrix,
+                expected_mass_matrix=precomputed_results.mass_matrix,
             )
         )
     return setups
 
 
 # ==================================================================================================
-@pytest.fixture(params=list(range(config.NUM_FEM_SETUPS)), ids=config.FEM_SETUP_IDS)
+@pytest.fixture(params=list(range(main_config.NUM_FEM_SETUPS)), ids=main_config.FEM_SETUP_IDS)
 def parametrized_matrix_assembly_setup(
     request: pytest.FixtureRequest, matrix_assembly_setups: list[MatrixAssemblySetup]
 ) -> MatrixAssemblySetup:
     return matrix_assembly_setups[request.param]
 
 
-@pytest.fixture(params=list(range(config.NUM_FEM_SETUPS)), ids=config.FEM_SETUP_IDS)
+@pytest.fixture(params=list(range(main_config.NUM_FEM_SETUPS)), ids=main_config.FEM_SETUP_IDS)
 def parametrized_fem_converter_setup(
     request: pytest.FixtureRequest, fem_converter_setups: list[FEMConverterSetup]
 ) -> FEMConverterSetup:
     return fem_converter_setups[request.param]
 
 
-@pytest.fixture(params=list(range(config.NUM_FEM_SETUPS)), ids=config.FEM_SETUP_IDS)
+@pytest.fixture(params=list(range(main_config.NUM_FEM_SETUPS)), ids=main_config.FEM_SETUP_IDS)
 def parametrized_factorization_assembler_setup(
     request: pytest.FixtureRequest,
     factorization_assembler_setups: list[FactorizationAssemblerSetup],

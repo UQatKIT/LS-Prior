@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from petsc4py import PETSc
 
-import test.conftest as config
+import test.conftest as main_config
 from ls_prior import builder, components, fem, prior
 
 
@@ -33,7 +33,7 @@ def compute_covariance_cholesky_factor(
     covariance_matrix = inverse_spde_matrix @ mass_matrix @ inverse_spde_matrix
     cholesky_factor = np.linalg.cholesky(covariance_matrix)
     cholesky_factor_petsc = PETSc.Mat().createAIJ(
-        size=cholesky_factor.shape, comm=config.MPI_COMMUNICATOR
+        size=cholesky_factor.shape, comm=main_config.MPI_COMMUNICATOR
     )
     cholesky_factor_petsc.setUp()
     row_inds = np.arange(cholesky_factor.shape[0], dtype=np.int32)
@@ -91,14 +91,14 @@ def set_up_components(
 
 # ==================================================================================================
 @pytest.fixture(scope="session")
-def bilaplacian_component_setup(
-    fem_setup_combinations: list[config.FEMSpaceSetup],
-    matrix_component_setup: list[config.MatrixComponentSetup],
+def bilaplacian_component_setups(
+    fem_setup_combinations: list[main_config.FEMSpaceSetup],
+    matrix_component_setups: list[main_config.MatrixComponentSetup],
 ) -> list[PriorComponentSetup]:
     component_setups = []
 
     for fem_setup, matric_components in zip(
-        fem_setup_combinations, matrix_component_setup, strict=True
+        fem_setup_combinations, matrix_component_setups, strict=True
     ):
         mass_matrix_petsc = matric_components.mass_matrix_petsc
         spde_matrix_petsc = matric_components.spde_matrix_petsc
@@ -115,7 +115,7 @@ def bilaplacian_component_setup(
 
         fem_converter = fem.FEMConverter(fem_setup.function_space)
         precision_interface, covariance_interface, sampling_factor_interface = set_up_components(
-            mass_matrix_petsc, spde_matrix_petsc, cholesky_factor_petsc, fem_converter
+            mass_matrix_petsc, spde_matrix_petsc, cholesky_factor_petsc
         )
         rng = np.random.default_rng(0)
         mean_array = rng.random(fem_setup.mesh.geometry.x.shape[0])
@@ -139,12 +139,12 @@ def bilaplacian_component_setup(
 
 
 # --------------------------------------------------------------------------------------------------
-@pytest.fixture(params=list(range(config.NUM_FEM_SETUPS)), ids=config.FEM_SETUP_IDS)
+@pytest.fixture(params=list(range(main_config.NUM_FEM_SETUPS)), ids=main_config.FEM_SETUP_IDS)
 def parametrized_bilaplacian_component_setup(
     request: pytest.FixtureRequest,
-    bilaplacian_component_setup: list[PriorComponentSetup],
+    bilaplacian_component_setups: list[PriorComponentSetup],
 ) -> PriorComponentSetup:
-    return bilaplacian_component_setup[request.param]
+    return bilaplacian_component_setups[request.param]
 
 
 # ==================================================================================================

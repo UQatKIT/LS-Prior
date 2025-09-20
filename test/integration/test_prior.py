@@ -3,13 +3,15 @@ import pytest
 
 from ls_prior import prior
 
-from . import conftest as config
+from . import conftest as integration_config
 
 pytestmark = pytest.mark.unit
 
 
 # ==================================================================================================
-def test_prior_cost(parametrized_bilaplacian_component_setup: config.PriorComponentSetup) -> None:
+def test_prior_cost(
+    parametrized_bilaplacian_component_setup: integration_config.PriorComponentSetup,
+) -> None:
     mean_array = parametrized_bilaplacian_component_setup.mean_vector
     precision_array = parametrized_bilaplacian_component_setup.precision_array
     fem_converter = parametrized_bilaplacian_component_setup.fem_converter
@@ -33,7 +35,9 @@ def test_prior_cost(parametrized_bilaplacian_component_setup: config.PriorCompon
 
 
 # --------------------------------------------------------------------------------------------------
-def test_prior_grad(parametrized_bilaplacian_component_setup: config.PriorComponentSetup) -> None:
+def test_prior_grad(
+    parametrized_bilaplacian_component_setup: integration_config.PriorComponentSetup,
+) -> None:
     mean_array = parametrized_bilaplacian_component_setup.mean_vector
     precision_array = parametrized_bilaplacian_component_setup.precision_array
     fem_converter = parametrized_bilaplacian_component_setup.fem_converter
@@ -58,7 +62,9 @@ def test_prior_grad(parametrized_bilaplacian_component_setup: config.PriorCompon
 
 
 # --------------------------------------------------------------------------------------------------
-def test_prior_hvp(parametrized_bilaplacian_component_setup: config.PriorComponentSetup) -> None:
+def test_prior_hvp(
+    parametrized_bilaplacian_component_setup: integration_config.PriorComponentSetup,
+) -> None:
     mean_array = parametrized_bilaplacian_component_setup.mean_vector
     precision_array = parametrized_bilaplacian_component_setup.precision_array
     fem_converter = parametrized_bilaplacian_component_setup.fem_converter
@@ -81,7 +87,9 @@ def test_prior_hvp(parametrized_bilaplacian_component_setup: config.PriorCompone
 
 
 # --------------------------------------------------------------------------------------------------
-def test_prior_sample(parametrized_bilaplacian_component_setup: config.PriorComponentSetup) -> None:
+def test_prior_sample(
+    parametrized_bilaplacian_component_setup: integration_config.PriorComponentSetup,
+) -> None:
     mean_array = parametrized_bilaplacian_component_setup.mean_vector
     sampling_factor_array = parametrized_bilaplacian_component_setup.sampling_factor_array
     fem_converter = parametrized_bilaplacian_component_setup.fem_converter

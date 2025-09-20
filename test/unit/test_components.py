@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from petsc4py import PETSc
 
-import test.conftest as config
+import test.conftest as main_config
 from ls_prior import components
 
 pytestmark = pytest.mark.unit
@@ -10,7 +10,7 @@ pytestmark = pytest.mark.unit
 
 # ==================================================================================================
 def test_matrix_component(
-    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+    parametrized_matrix_component_setup: main_config.MatrixComponentSetup,
 ) -> None:
     numpy_matrix = parametrized_matrix_component_setup.mass_matrix_array
     petsc_matrix = parametrized_matrix_component_setup.mass_matrix_petsc
@@ -26,7 +26,7 @@ def test_matrix_component(
 
 # --------------------------------------------------------------------------------------------------
 def test_inverse_cg_solver_component(
-    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+    parametrized_matrix_component_setup: main_config.MatrixComponentSetup,
 ) -> None:
     mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
     inverse_mass_matrix = np.linalg.inv(mass_matrix_array)
@@ -49,7 +49,7 @@ def test_inverse_cg_solver_component(
 
 # --------------------------------------------------------------------------------------------------
 def test_inverse_amg_solver_component(
-    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+    parametrized_matrix_component_setup: main_config.MatrixComponentSetup,
 ) -> None:
     spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
     inverse_spde_matrix = np.linalg.inv(spde_matrix_array)

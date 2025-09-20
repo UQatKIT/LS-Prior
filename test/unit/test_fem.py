@@ -4,14 +4,17 @@ import pytest
 import ufl
 from dolfinx.fem import petsc
 
-import test.conftest as config
 from ls_prior import fem
+
+from . import conftest as unit_config
 
 pytestmark = pytest.mark.unit
 
 
 # ==================================================================================================
-def test_matrix_assembly(parametrized_matrix_assembly_setup: config.MatrixAssemblySetup) -> None:
+def test_matrix_assembly(
+    parametrized_matrix_assembly_setup: unit_config.MatrixAssemblySetup,
+) -> None:
     mass_matrix_form, spde_matrix_form = fem.generate_forms(
         parametrized_matrix_assembly_setup.function_space,
         parametrized_matrix_assembly_setup.kappa,
@@ -39,7 +42,7 @@ def test_matrix_assembly(parametrized_matrix_assembly_setup: config.MatrixAssemb
 
 # --------------------------------------------------------------------------------------------------
 def test_fem_converter_vertex_to_dofs(
-    parametrized_fem_converter_setup: config.FEMConverterSetup,
+    parametrized_fem_converter_setup: unit_config.FEMConverterSetup,
 ) -> None:
     converter = fem.FEMConverter(parametrized_fem_converter_setup.function_space)
     dof_values = converter.convert_vertex_values_to_dofs(
@@ -50,7 +53,7 @@ def test_fem_converter_vertex_to_dofs(
 
 # --------------------------------------------------------------------------------------------------
 def test_fem_converter_dofs_to_vertex(
-    parametrized_fem_converter_setup: config.FEMConverterSetup,
+    parametrized_fem_converter_setup: unit_config.FEMConverterSetup,
 ) -> None:
     converter = fem.FEMConverter(parametrized_fem_converter_setup.function_space)
     vertex_values = converter.convert_dofs_to_vertex_values(
@@ -63,7 +66,7 @@ def test_fem_converter_dofs_to_vertex(
 
 # --------------------------------------------------------------------------------------------------
 def test_matrix_factorization_assembler(
-    parametrized_factorization_assembler_setup: config.FactorizationAssemblerSetup,
+    parametrized_factorization_assembler_setup: unit_config.FactorizationAssemblerSetup,
 ) -> None:
     mesh = parametrized_factorization_assembler_setup.fem_setup.mesh
     function_space = parametrized_factorization_assembler_setup.fem_setup.function_space

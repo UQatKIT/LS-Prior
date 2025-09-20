@@ -173,6 +173,6 @@ def matrix_component_setups(
 @pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
 def parametrized_matrix_component_setup(
     request: pytest.FixtureRequest,
-    matrix_component_setup: list[MatrixComponentSetup],
+    matrix_component_setups: list[MatrixComponentSetup],
 ) -> MatrixComponentSetup:
-    return matrix_component_setup[request.param]
+    return matrix_component_setups[request.param]

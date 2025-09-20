@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from petsc4py import PETSc
 
-import test.conftest as config
+import test.conftest as main_config
 from ls_prior import components
 
 pytestmark = pytest.mark.integration
@@ -10,7 +10,7 @@ pytestmark = pytest.mark.integration
 
 # ==================================================================================================
 def test_bilaplacian_precision(
-    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+    parametrized_matrix_component_setup: main_config.MatrixComponentSetup,
 ) -> None:
     mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
     spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
@@ -46,7 +46,7 @@ def test_bilaplacian_precision(
 
 # --------------------------------------------------------------------------------------------------
 def test_bilaplacian_covariance(
-    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+    parametrized_matrix_component_setup: main_config.MatrixComponentSetup,
 ) -> None:
     mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
     spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
