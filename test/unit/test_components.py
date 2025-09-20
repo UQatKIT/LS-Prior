@@ -10,12 +10,12 @@ pytestmark = pytest.mark.unit
 
 # ==================================================================================================
 def test_matrix_component(
-    parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
-):
-    numpy_matrix = parametrized_matrix_representation.mass_matrix_array
-    petsc_matrix = parametrized_matrix_representation.mass_matrix_petsc
-    input_array = parametrized_matrix_representation.input_array
-    input_vector = parametrized_matrix_representation.input_vector
+    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+) -> None:
+    numpy_matrix = parametrized_matrix_component_setup.mass_matrix_array
+    petsc_matrix = parametrized_matrix_component_setup.mass_matrix_petsc
+    input_array = parametrized_matrix_component_setup.input_array
+    input_vector = parametrized_matrix_component_setup.input_vector
 
     matrix_component = components.Matrix(petsc_matrix)
     output_vector = matrix_component.create_output_vector()
@@ -26,13 +26,13 @@ def test_matrix_component(
 
 # --------------------------------------------------------------------------------------------------
 def test_inverse_cg_solver_component(
-    parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
-):
-    mass_matrix_array = parametrized_matrix_representation.mass_matrix_array
+    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+) -> None:
+    mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
     inverse_mass_matrix = np.linalg.inv(mass_matrix_array)
-    mass_matrix_petsc = parametrized_matrix_representation.mass_matrix_petsc
-    input_array = parametrized_matrix_representation.input_array
-    input_vector = parametrized_matrix_representation.input_vector
+    mass_matrix_petsc = parametrized_matrix_component_setup.mass_matrix_petsc
+    input_array = parametrized_matrix_component_setup.input_array
+    input_vector = parametrized_matrix_component_setup.input_vector
 
     cg_solver_settings = components.InverseMatrixSolverSettings(
         solver_type=PETSc.KSP.Type.CG,
@@ -49,13 +49,13 @@ def test_inverse_cg_solver_component(
 
 # --------------------------------------------------------------------------------------------------
 def test_inverse_amg_solver_component(
-    parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
-):
-    spde_matrix_array = parametrized_matrix_representation.spde_matrix_array
+    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+) -> None:
+    spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
     inverse_spde_matrix = np.linalg.inv(spde_matrix_array)
-    spde_matrix_petsc = parametrized_matrix_representation.spde_matrix_petsc
-    input_array = parametrized_matrix_representation.input_array
-    input_vector = parametrized_matrix_representation.input_vector
+    spde_matrix_petsc = parametrized_matrix_component_setup.spde_matrix_petsc
+    input_array = parametrized_matrix_component_setup.input_array
+    input_vector = parametrized_matrix_component_setup.input_vector
 
     amg_solver_settings = components.InverseMatrixSolverSettings(
         solver_type=PETSc.KSP.Type.CG,

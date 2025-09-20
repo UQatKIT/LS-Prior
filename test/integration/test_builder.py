@@ -1,11 +1,13 @@
 import numpy as np
 import pytest
 
+from ls_prior import prior
+
 pytestmark = pytest.mark.unit
 
 
 # ==================================================================================================
-def test_bilaplacian_builder(prior_build_setup) -> None:
+def test_bilaplacian_builder(prior_build_setup: tuple[prior.Prior, prior.Prior, int]) -> None:
     prior_object, built_prior_object, size = prior_build_setup
     rng = np.random.default_rng(1)
     state_array = rng.random(size)

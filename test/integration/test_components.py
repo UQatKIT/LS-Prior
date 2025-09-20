@@ -10,14 +10,14 @@ pytestmark = pytest.mark.integration
 
 # ==================================================================================================
 def test_bilaplacian_precision(
-    parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
-):
-    mass_matrix_array = parametrized_matrix_representation.mass_matrix_array
-    spde_matrix_array = parametrized_matrix_representation.spde_matrix_array
-    mass_matrix_petsc = parametrized_matrix_representation.mass_matrix_petsc
-    spde_matrix_petsc = parametrized_matrix_representation.spde_matrix_petsc
-    input_array = parametrized_matrix_representation.input_array
-    input_vector = parametrized_matrix_representation.input_vector
+    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+) -> None:
+    mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
+    spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
+    mass_matrix_petsc = parametrized_matrix_component_setup.mass_matrix_petsc
+    spde_matrix_petsc = parametrized_matrix_component_setup.spde_matrix_petsc
+    input_array = parametrized_matrix_component_setup.input_array
+    input_vector = parametrized_matrix_component_setup.input_vector
 
     bilaplacian_precision_array = (
         spde_matrix_array @ np.linalg.inv(mass_matrix_array) @ spde_matrix_array
@@ -44,15 +44,16 @@ def test_bilaplacian_precision(
     assert np.allclose(output_vector.getArray(), expected_output)
 
 
+# --------------------------------------------------------------------------------------------------
 def test_bilaplacian_covariance(
-    parametrized_matrix_representation: config.PrecomputedMatrixRepresentation,
-):
-    mass_matrix_array = parametrized_matrix_representation.mass_matrix_array
-    spde_matrix_array = parametrized_matrix_representation.spde_matrix_array
-    mass_matrix_petsc = parametrized_matrix_representation.mass_matrix_petsc
-    spde_matrix_petsc = parametrized_matrix_representation.spde_matrix_petsc
-    input_array = parametrized_matrix_representation.input_array
-    input_vector = parametrized_matrix_representation.input_vector
+    parametrized_matrix_component_setup: config.MatrixComponentSetup,
+) -> None:
+    mass_matrix_array = parametrized_matrix_component_setup.mass_matrix_array
+    spde_matrix_array = parametrized_matrix_component_setup.spde_matrix_array
+    mass_matrix_petsc = parametrized_matrix_component_setup.mass_matrix_petsc
+    spde_matrix_petsc = parametrized_matrix_component_setup.spde_matrix_petsc
+    input_array = parametrized_matrix_component_setup.input_array
+    input_vector = parametrized_matrix_component_setup.input_vector
 
     inverse_spde_matrix_array = np.linalg.inv(spde_matrix_array)
     bilaplacian_covariance_array = (

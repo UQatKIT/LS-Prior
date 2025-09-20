@@ -36,30 +36,6 @@ class FEMSpaceSetup:
 
 
 @dataclass
-class MatrixAssemblySetup:
-    function_space: dlx.fem.FunctionSpace
-    kappa: float
-    tau: float
-    robin_const: float
-    expected_mass_matrix: np.ndarray
-    expected_spde_matrix: np.ndarray
-
-
-@dataclass
-class FEMConverterSetup:
-    function_space: dlx.fem.FunctionSpace
-    input_vertex_values: np.ndarray
-    expected_dof_values: PETSc.Vec
-    expected_output_vertex_values: np.ndarray
-
-
-@dataclass
-class FactorizationAssemblerSetup:
-    fem_setup: FEMSpaceSetup
-    expected_mass_matrix: np.ndarray
-
-
-@dataclass
 class MatrixComponentSetup:
     mass_matrix_array: np.ndarray
     spde_matrix_array: np.ndarray
@@ -71,24 +47,20 @@ class MatrixComponentSetup:
 
 # ==================================================================================================
 def unit_interval_mesh() -> dlx.mesh.Mesh:
-    """Create a 1D unit interval mesh."""
     return dlx.mesh.create_unit_interval(MPI_COMMUNICATOR, nx=3)
 
 
 def unit_square_mesh() -> dlx.mesh.Mesh:
-    """Create a 2D unit square mesh."""
     return dlx.mesh.create_unit_square(
         MPI_COMMUNICATOR, nx=2, ny=2, cell_type=dlx.mesh.CellType.triangle
     )
 
 
 def cg1_space(mesh: dlx.mesh.Mesh) -> dlx.fem.FunctionSpace:
-    """P1 continuous Galerkin function space."""
     return dlx.fem.functionspace(mesh, ("Lagrange", 1))
 
 
 def cg2_space(mesh: dlx.mesh.Mesh) -> dlx.fem.FunctionSpace:
-    """P2 continuous Galerkin function space."""
     return dlx.fem.functionspace(mesh, ("Lagrange", 2))
 
 
@@ -157,73 +129,9 @@ def fem_setup_combinations() -> list[FEMSpaceSetup]:
 
 # --------------------------------------------------------------------------------------------------
 @pytest.fixture(scope="session")
-def matrix_assembly_setups(
-    fem_setup_combinations: list[FEMSpaceSetup],
+def matrix_component_setups(
     precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices],
-) -> list[MatrixAssemblySetup]:
-    kappa = 1.0
-    tau = 1.0
-    robin_const = None
-    setups = []
-    for fem_setup, precomputed_results in zip(
-        fem_setup_combinations, precomputed_assembly_matrices, strict=True
-    ):
-        setups.append(
-            MatrixAssemblySetup(
-                function_space=fem_setup.function_space,
-                kappa=kappa,
-                tau=tau,
-                robin_const=robin_const,
-                expected_mass_matrix=precomputed_results.mass_matrix,
-                expected_spde_matrix=precomputed_results.spde_matrix,
-            )
-        )
-    return setups
-
-
-# --------------------------------------------------------------------------------------------------
-@pytest.fixture(scope="session")
-def fem_converter_setups(
-    fem_setup_combinations: list[FEMSpaceSetup],
-    precomputed_converter_vectors: list[PrecomputedConverterVectors],
-) -> list[FEMConverterSetup]:
-    setups = []
-    for fem_setup, precomputed_results in zip(
-        fem_setup_combinations, precomputed_converter_vectors, strict=True
-    ):
-        setups.append(
-            FEMConverterSetup(
-                function_space=fem_setup.function_space,
-                input_vertex_values=precomputed_results.input_vertex_values,
-                expected_dof_values=precomputed_results.dof_values,
-                expected_output_vertex_values=precomputed_results.output_vertex_values,
-            )
-        )
-    return setups
-
-
-# --------------------------------------------------------------------------------------------------
-@pytest.fixture(scope="session")
-def factorization_assembler_setups(
-    fem_setup_combinations: list[FEMSpaceSetup],
-    precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices],
-) -> list[FactorizationAssemblerSetup]:
-    setups = []
-    for fem_setup, precomputed_results in zip(
-        fem_setup_combinations, precomputed_assembly_matrices, strict=True
-    ):
-        setups.append(
-            FactorizationAssemblerSetup(
-                fem_setup=fem_setup,
-                expected_mass_matrix=precomputed_results.expected_mass_matrix,
-            )
-        )
-    return setups
-
-
-# --------------------------------------------------------------------------------------------------
-@pytest.fixture(scope="session")
-def matrix_component_setup(precomputed_assembly_matrices: list[PrecomputedAssemblyMatrices]):
+) -> list[MatrixComponentSetup]:
     matrix_representations = []
     rng = np.random.default_rng(0)
 
@@ -263,29 +171,7 @@ def matrix_component_setup(precomputed_assembly_matrices: list[PrecomputedAssemb
 
 # ==================================================================================================
 @pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
-def parametrized_matrix_assembly_setup(
-    request: pytest.FixtureRequest, matrix_assembly_setups: list[MatrixAssemblySetup]
-) -> MatrixAssemblySetup:
-    return matrix_assembly_setups[request.param]
-
-
-@pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
-def parametrized_fem_converter_setup(
-    request: pytest.FixtureRequest, fem_converter_setups: list[FEMConverterSetup]
-) -> FEMConverterSetup:
-    return fem_converter_setups[request.param]
-
-
-@pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
-def parametrized_factorization_assembler_setup(
-    request: pytest.FixtureRequest,
-    factorization_assembler_setups: list[FactorizationAssemblerSetup],
-) -> FactorizationAssemblerSetup:
-    return factorization_assembler_setups[request.param]
-
-
-@pytest.fixture(params=list(range(NUM_FEM_SETUPS)), ids=FEM_SETUP_IDS)
-def parametrized_matrix_representation(
+def parametrized_matrix_component_setup(
     request: pytest.FixtureRequest,
     matrix_component_setup: list[MatrixComponentSetup],
 ) -> MatrixComponentSetup:

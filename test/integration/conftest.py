@@ -43,7 +43,14 @@ def compute_covariance_cholesky_factor(
     return cholesky_factor, cholesky_factor_petsc
 
 
-def set_up_components(mass_matrix_petsc, spde_matrix_petsc, sampling_factor_petsc):
+# --------------------------------------------------------------------------------------------------
+def set_up_components(
+    mass_matrix_petsc: PETSc.Mat, spde_matrix_petsc: PETSc.Mat, sampling_factor_petsc: PETSc.Mat
+) -> tuple[
+    components.InterfaceComponent,
+    components.InterfaceComponent,
+    components.InterfaceComponent,
+]:
     cg_solver_settings = components.InverseMatrixSolverSettings(
         solver_type=PETSc.KSP.Type.CG,
         preconditioner_type=PETSc.PC.Type.JACOBI,
@@ -82,20 +89,21 @@ def set_up_components(mass_matrix_petsc, spde_matrix_petsc, sampling_factor_pets
     return precision_interface, covariance_interface, sampling_factor_interface
 
 
+# ==================================================================================================
 @pytest.fixture(scope="session")
 def bilaplacian_component_setup(
     fem_setup_combinations: list[config.FEMSpaceSetup],
-    matrix_component_setup: list[config.PrecomputedMatrixRepresentation],
-) -> None:
+    matrix_component_setup: list[config.MatrixComponentSetup],
+) -> list[PriorComponentSetup]:
     component_setups = []
 
-    for fem_setup, matrix_representation in zip(
+    for fem_setup, matric_components in zip(
         fem_setup_combinations, matrix_component_setup, strict=True
     ):
-        mass_matrix_petsc = matrix_representation.mass_matrix_petsc
-        spde_matrix_petsc = matrix_representation.spde_matrix_petsc
-        mass_matrix_array = matrix_representation.mass_matrix_array
-        spde_matrix_array = matrix_representation.spde_matrix_array
+        mass_matrix_petsc = matric_components.mass_matrix_petsc
+        spde_matrix_petsc = matric_components.spde_matrix_petsc
+        mass_matrix_array = matric_components.mass_matrix_array
+        spde_matrix_array = matric_components.spde_matrix_array
         cholesky_factor_array, cholesky_factor_petsc = compute_covariance_cholesky_factor(
             mass_matrix_array, spde_matrix_array
         )
@@ -130,6 +138,7 @@ def bilaplacian_component_setup(
     return component_setups
 
 
+# --------------------------------------------------------------------------------------------------
 @pytest.fixture(params=list(range(config.NUM_FEM_SETUPS)), ids=config.FEM_SETUP_IDS)
 def parametrized_bilaplacian_component_setup(
     request: pytest.FixtureRequest,
@@ -138,8 +147,11 @@ def parametrized_bilaplacian_component_setup(
     return bilaplacian_component_setup[request.param]
 
 
+# ==================================================================================================
 @pytest.fixture
-def prior_build_setup(parametrized_bilaplacian_component_setup):
+def prior_build_setup(
+    parametrized_bilaplacian_component_setup: PriorComponentSetup,
+) -> tuple[prior.Prior, prior.Prior, int]:
     mesh = parametrized_bilaplacian_component_setup.mesh
     function_space = parametrized_bilaplacian_component_setup.function_space
     mean_array = parametrized_bilaplacian_component_setup.mean_vector
