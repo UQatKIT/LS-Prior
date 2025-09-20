@@ -22,11 +22,10 @@ representation.
 
 ## Installation
 
-LS-Prior is currently managed as a [Pixi](https://pixi.sh/latest/) project, a conda package is planned. To start using LS-Prior, simply run
+LS-Prior is available as a conda package on [Prefix](https://prefix.dev/channels/kruse-forge/packages/ls-prior). To install the package, simply run
 ```bash
-pixi install
+conda install -c https://repo.prefix.dev/kruse-forge ls-prior
 ```
-in the top-level directory.
 
 ## Documentation
 
