@@ -62,7 +62,6 @@ trame-vuetify = ">=3.0.2,<4"
 ruff = ">=0.12.10,<0.13"
 pre-commit = ">=4.3.0,<5"
 gmsh = ">=4.13.1,<5"
-pygmsh = ">=7.1.17,<8"
 rattler-build = ">=0.47.0,<0.48"
 
 [tool.pixi.feature.dev.pypi-dependencies]
