@@ -4860,7 +4860,7 @@ packages:
 - pypi: ./
   name: ls-prior
   version: 0.4.14
-  sha256: 74dc31e9ff9c65e5e1d7dd8048320435c40c087a0313c7b8a597837a82f7fbd9
+  sha256: 89b3fa770002e209a75b3ba6180f5072f2e5f6951c09a64cac0ca1da264f9990
   requires_python: '>=3.13'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/lz4-c-1.10.0-h5888daf_1.conda
