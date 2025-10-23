@@ -28,22 +28,13 @@ urls = { repository = "https://github.com/UQatKIT/LS-Prior", documentation = "ht
 # ==================================================================================================
 [tool.pixi.dependencies]
 numpy = ">=2.2"
-fenics-dolfinx = ">=0.9.0, <0.10"
+fenics-dolfinx = ">=0.9.0"
 mpich = ">=4.3.1"
 beartype = ">=0.21.0"
 scifem = ">=0.7.0"
 
-
-# ==================================================================================================
-# Pixi Tasks
-# ==================================================================================================
-[tool.pixi.tasks]
-test = "pytest test"
-format = "ruff format"
-serve-docs = "mkdocs serve"
-build-docs = "mkdocs build"
-changelog = "git-cliff"
-pre-commit = "pre-commit install"
+[tool.pixi.pypi-dependencies]
+ls_prior = { path = ".", editable = true }
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.4.1"
@@ -71,8 +62,10 @@ trame-vuetify = ">=3.0.2"
 ruff = ">=0.12.10"
 pre-commit = ">=4.3.0"
 gmsh = ">=4.13.1"
-pygmsh = ">=7.1.17"
+rattler-build = ">=0.47.0"
 
+[tool.pixi.feature.dev.pypi-dependencies]
+toml-cli = ">=0.8.2"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
@@ -80,19 +73,63 @@ dev = { features = ["dev"], solve-group = "default" }
 examples = { features = ["examples"], solve-group = "default" }
 test = { features = ["dev", "test"], solve-group = "default" }
 docs = { features = ["dev", "docs"], solve-group = "default" }
-all = { features = ["dev", "docs", "examples", "test"], solve-group = "default" }
+all = { features = [
+  "dev",
+  "docs",
+  "examples",
+  "test",
+], solve-group = "default" }
 
 
-# --------------------------------------------------------------------------------------------------
+# ==================================================================================================
+# Pixi Workspace and Build
+# ==================================================================================================
 [build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling", "hatch-vcs"]
+build-backend = "uv_build"
+requires = ["uv_build>=0.8.0"]
 
-[tool.hatch.version]
-source = "vcs"
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+preview = ["pixi-build"]
+
+[tool.pixi.package.build]
+backend = { name = "pixi-build-python", version = "*", channels = [
+  "https://prefix.dev/conda-forge",
+] }
+
+[tool.pixi.package.host-dependencies]
+uv = "*"
+git = "*"
+hatchling = "*"
+
+[tool.pixi.package.run-dependencies]
+numpy = ">=2.2"
+fenics-dolfinx = ">=0.9.0"
+mpich = ">=4.3.1"
+beartype = ">=0.21.0"
+scifem = ">=0.7.0"
 
 
-# --------------------------------------------------------------------------------------------------
+# ==================================================================================================
+# Pixi Tasks
+# ==================================================================================================
+[tool.pixi.tasks]
+test = "pytest test"
+format = "ruff format"
+serve-docs = "mkdocs serve"
+build-docs = "mkdocs build"
+changelog = "git-cliff"
+pre-commit = "pre-commit install"
+
+[tool.pixi.tasks.bump-version]
+args = ["version"]
+cmd = "toml set --toml-path pyproject.toml project.version {{version}} && pixi lock"
+
+
+# ==================================================================================================
+# Ruff
+# ==================================================================================================
 [tool.ruff]
 line-length = 100
 
