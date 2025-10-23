@@ -4926,8 +4926,8 @@ packages:
   timestamp: 1746634858826
 - pypi: ./
   name: ls-prior
-  version: 0.1.1.dev2+g058cfd9e8.d20250905
-  sha256: 1d3824c39ddf66cb7a8528c579694859cb95f37769930d9e66145baef81b8bfa
+  version: 0.1.1.dev4+g7f60ef974.d20251023
+  sha256: 3d13a10e125229076adab7ff6f419ec115741d9e35a1c7a2573b60d6252935ef
   requires_python: '>=3.13'
   editable: true
 - conda: https://conda.anaconda.org/conda-forge/linux-64/lz4-c-1.10.0-h5888daf_1.conda
