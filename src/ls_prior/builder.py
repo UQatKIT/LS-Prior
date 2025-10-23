@@ -108,7 +108,7 @@ class BilaplacianPriorBuilder:
             max_num_iterations=settings.cg_max_iterations,
         )
         self._amg_solver_settings = components.InverseMatrixSolverSettings(
-            solver_type=PETSc.KSP.Type.PREONLY,
+            solver_type=PETSc.KSP.Type.CG,
             preconditioner_type=PETSc.PC.Type.GAMG,
             relative_tolerance=settings.amg_relative_tolerance,
             absolute_tolerance=settings.amg_absolute_tolerance,
@@ -134,16 +134,15 @@ class BilaplacianPriorBuilder:
             mass_matrix, spde_matrix, block_diagonal_matrix, dof_map_matrix
         )
         precision_operator_interface, covariance_operator_interface, sampling_factor_interface = (
-            self._build_interfaces(
-                precision_operator, covariance_operator, sampling_factor, converter
-            )
+            self._build_interfaces(precision_operator, covariance_operator, sampling_factor)
         )
         bilaplace_prior = prior.Prior(
             self._mean_vector,
             precision_operator_interface,
             covariance_operator_interface,
             sampling_factor_interface,
-            seed=0,
+            converter,
+            seed=self._seed,
         )
         return bilaplace_prior
 
@@ -236,7 +235,6 @@ class BilaplacianPriorBuilder:
         precision_operator: components.PETScComponent,
         covariance_operator: components.PETScComponent,
         sampling_factor: components.PETScComponent,
-        converter: fem.FEMConverter,
     ) -> tuple[
         components.InterfaceComponent, components.InterfaceComponent, components.InterfaceComponent
     ]:
@@ -246,21 +244,15 @@ class BilaplacianPriorBuilder:
             precision_operator (components.PETScComponent): Precision operator $\mathcal{C}^{-1}$.
             covariance_operator (components.PETScComponent): SPDE matrix $A$.
             sampling_factor (components.PETScComponent): Sampling factor $\widehat{\mathcal{C}}$.
-            converter (fem.FEMConverter): DoF-vertex converter.
 
         Returns:
             tuple[components.InterfaceComponent,
                   components.InterfaceComponent,
                   components.InterfaceComponent]: Wrapped interface components.
         """
-        precision_operator_interface = components.InterfaceComponent(precision_operator, converter)
-        covariance_operator_interface = components.InterfaceComponent(
-            covariance_operator, converter
-        )
-        # Do not convert sampling factor input, this is simply an array of numbers, not DoFs-based
-        sampling_factor_interface = components.InterfaceComponent(
-            sampling_factor, converter, convert_input_from_mesh=False, convert_output_to_mesh=True
-        )
+        precision_operator_interface = components.InterfaceComponent(precision_operator)
+        covariance_operator_interface = components.InterfaceComponent(covariance_operator)
+        sampling_factor_interface = components.InterfaceComponent(sampling_factor)
         return (
             precision_operator_interface,
             covariance_operator_interface,

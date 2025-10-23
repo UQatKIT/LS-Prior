@@ -1,3 +1,5 @@
+![CI](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-Prior/ci.yaml?label=CI)
+![Docs](https://img.shields.io/github/actions/workflow/status/UQatKIT/LS-Prior/docs.yaml?label=Docs)
 ![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2FUQatKIT%2FLS-Prior%2Fmain%2Fpyproject.toml)
 ![License](https://img.shields.io/github/license/UQatKIT/LS-Prior)
 ![Beartype](https://github.com/beartype/beartype-assets/raw/main/badge/bear-ified.svg)
@@ -27,12 +29,10 @@ representation.
 
 ## Getting Started
 
-LS-Prior is currently managed as a [Pixi](https://pixi.sh/latest/) project, a conda package is planned. To
-start using LS-Prior, simply run
+LS-Prior is available as a conda package on [Prefix](https://prefix.dev/channels/kruse-forge/packages/ls-prior). To install the package, simply run
 ```bash
-pixi install
+conda install -c https://repo.prefix.dev/kruse-forge ls-prior
 ```
-in the top-level directory.
 
 ## Documentation
 

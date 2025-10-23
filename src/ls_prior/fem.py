@@ -82,7 +82,7 @@ class FEMConverter:
     This class connects the representation of arrays in dolfinx on a specified function space
     with a vertex-based viewpoint. Think of it as the adapter required for the prior to
     communicate with external components. The underlying idea is that such outside components
-    only see the computational mesh, and define discrete data over the vertices of that mesh
+    only see the computational mesh, and define discrete data over the vertices of that mesh.
     An `FEMConverter` object takes such data structures and inerpolates them to the provided
     function space. On the other hand, it can interpolate any data defined on the DoFs of the
     underlying function space onto the vertices of the mesh.
@@ -90,7 +90,7 @@ class FEMConverter:
     function space (whose degrees of freedom are exactly the vertices).
     It subsequently utilizes dolfinx's efficient interpolation between function spaces.
     On the other hand, data from some function space is interpolated to a P1 space, and
-    subsequently extracts vertex values.
+    subsequently extracted to vertex values.
 
     Methods:
         convert_vertex_values_to_dofs: Convert vertex based data to DoF representation
@@ -118,7 +118,7 @@ class FEMConverter:
     # ----------------------------------------------------------------------------------------------
     def convert_vertex_values_to_dofs(
         self, vertex_values: np.ndarray[tuple[int], np.dtype[np.float64]]
-    ) -> PETSc.Vec:
+    ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Convert vertex based data to DoF representation.
 
         Args:
@@ -130,8 +130,8 @@ class FEMConverter:
                 on the underlying mesh.
 
         Returns:
-            PETSc.Vec: PETSc Vector containing the input data, interpolated to the required
-                function space DoFs.
+            np.ndarray[tuple[int], np.dtype[np.float64]]: Input data interpolated to the required
+                function space DoFs, copied.
         """
         if not vertex_values.shape == (self.vertex_space_dim,):
             raise ValueError(
@@ -145,40 +145,40 @@ class FEMConverter:
             f"Created PETSc vector has size {self._dof_function.x.array.shape}, "
             f"but expected {(self.dof_space_dim,)}"
         )
-        return self._dof_function.x.petsc_vec
+        return self._dof_function.x.array.copy()
 
     # ----------------------------------------------------------------------------------------------
     def convert_dofs_to_vertex_values(
-        self, dof_values: PETSc.Vec
+        self, dof_values: np.ndarray[tuple[int], np.dtype[np.float64]]
     ) -> np.ndarray[tuple[int], np.dtype[np.float64]]:
         """Convert DoF based data to vertex representation.
 
         Args:
-            dof_values (PETSc.Vec): PETSc Vector containing Data on the DoFs of the underlying
-                function space.
+            dof_values (np.ndarray[tuple[int], np.dtype[np.float64]]): Array of data defined on
+                the DoFs of the underlying function space.
 
         Raises:
             ValueError: Checks that the dimension of the input vector matches the number of DoFs
-                on the underlying function space.
+                on the underlying function space, copied.
 
         Returns:
             np.ndarray[tuple[int], np.dtype[np.float64]]: Array of data interpolated to the vertices
                 of the underlying mesh.
         """
-        if not dof_values.getSize() == self.dof_space_dim:
+        if not dof_values.shape[0] == self.dof_space_dim:
             raise ValueError(
                 f"Expected dof_values to have size {self.dof_space_dim}, "
-                f"but got {dof_values.getSize()}"
+                f"but got {dof_values.shape[0]}"
             )
         self._dof_function.x.array[:] = dof_values
         self._dof_function.x.scatter_forward()
         self._vertex_function.interpolate(self._dof_function)
         assert self._vertex_function.x.array.shape == (self.vertex_space_dim,), (
-            f"Created PETSc vector has size {self._vertex_function.x.array.shape}, "
+            f"Created array has size {self._vertex_function.x.array.shape}, "
             f"but expected {(self.vertex_space_dim,)}"
         )
         vertex_values = self._vertex_function.x.array[self._dof_to_vertex_map]
-        return vertex_values
+        return vertex_values.copy()
 
 
 # ==================================================================================================
@@ -186,24 +186,24 @@ class FEMMatrixFactorizationAssembler:
     r"""Assembler for the rectangular factorization of an FEM matrix.
 
     This class provides the functionality for efficient factorization of a finite element matrix
-    $M$, i.e. it implements the (sparse representation of) assembly of a rectangular matrix
+    $M$, i.e. it implements the (sparse representation of an) assembly of a rectangular matrix
     $\widehat{M}$ s.th. $M = \widehat{M}\widehat{M}^T$. The factorization exploits the
     characteristics of standard finite element assembly procedures. This assembly is typically done
-    locally for the contribution of each mesh cell. These contributions are gathered into a global
-    matrix, with overlap at indices of vertices that are shared between cells. Now let $N$ be the
-    number of degrees of freedom of the finite element space, $M$ the number of cells in the
+    locally for the contribution of each mesh cell. The contributions are then gathered into a
+    global  matrix, with overlap at indices of vertices that are shared between cells. Now let $N$
+    be the number of degrees of freedom of the finite element space, $M$ the number of cells in the
     underlying mesh, and $N_e$ the number of degrees of freedom per cell. The matrix $M$ clearly has
     size $(N, N)$. Importantly, it can be decomposed as $M=L^T M_e L$. Here, the Matrix
-    $M_e\in \mathbb{R}^{MN_e}$ is a block diagonal matrix, containing the local FEM matrix
+    $M_e\in \mathbb{R}^{MN_e}$ is block-diagonal, containing the local FEM matrix
     contributions over all cells in each block. $L\in \mathbb{R}^{MN_e \times N}$ is a sparse
     matrix that maps the local cell DoFs in each block $M_e$ to their respective global DoFs. We
     can efficiently compute the Cholesky factor $\widehat{M}_e$ of $M_e$ by computing the
     cholesky factorization of each individual block. In particular, $\widehat{M}_e$ is still sparse,
     as opposed to standard Cholesky factors of sparse matrices. $\widehat{M}_e$ and $L$ now
     represent a sparse factorization $\widehat{M} = L^T \widehat{M}_e$ as above.
-    The two batrices shouldn't be multiplied directly to avoid fill-in. However, matrix-vector
-    products can be computed efficiently, by first multiplying with $\widehat{M}_e$,
-    and the result with $L$. For further information on this factorization procedure, we refer to
+    The two matrices shouldn't be multiplied directly to avoid fill-in effects. However,
+    matrix-vector products can be computed efficiently, by first multiplying with $\widehat{M}_e$,
+    and the result with $L$. For further information on the factorization procedure, we refer to
     [this publication](https://epubs.siam.org/doi/abs/10.1137/18M1175239).
 
     !!! warning

@@ -1,13 +1,18 @@
+# ==================================================================================================
+# Project Metadata
+# ==================================================================================================
 [project]
-authors = [{name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu"}]
-maintainers = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+authors = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+maintainers = [
+  { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
+]
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
 requires-python = ">= 3.13"
-dynamic = ["version"]
+version = "0.4.14"
 readme = "README.md"
 license = { text = "MIT" }
-keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx"]
+keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx", "petsc", "FEM"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Operating System :: POSIX :: Linux",
@@ -18,7 +23,9 @@ classifiers = [
 urls = { repository = "https://github.com/UQatKIT/LS-Prior", documentation = "https://uqatkit.github.io/LS-Prior/" }
 
 
-# --------------------------------------------------------------------------------------------------
+# ==================================================================================================
+# Dependencies
+# ==================================================================================================
 [tool.pixi.dependencies]
 numpy = ">=2.2"
 fenics-dolfinx = ">=0.9.0, <0.10"
@@ -26,13 +33,10 @@ mpich = ">=4.3.1"
 beartype = ">=0.21.0"
 scifem = ">=0.7.0"
 
-[tool.pixi.pypi-dependencies]
-ls_prior = { path = ".", editable = true }
 
-[tool.pixi.workspace]
-channels = ["conda-forge"]
-platforms = ["linux-64"]
-
+# ==================================================================================================
+# Pixi Tasks
+# ==================================================================================================
 [tool.pixi.tasks]
 test = "pytest test"
 format = "ruff format"
@@ -112,11 +116,20 @@ ignore = [
   "S101",
   "TRY003",
 ]
-per-file-ignores = { "test/*" = ["ANN001", "ANN201", "D100", "D103", "D104", "INP001", "SLF001"] }
+per-file-ignores = { "test/*" = [
+  "D100",
+  "D101",
+  "D103",
+  "D104",
+  "INP001",
+  "SLF001",
+] }
 pydocstyle.convention = "google"
 
 
-# --------------------------------------------------------------------------------------------------
+# ==================================================================================================
+# Pytest
+# ==================================================================================================
 [tool.pytest.ini_options]
 testpaths = ["test"]
 addopts = [
