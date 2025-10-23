@@ -9,7 +9,7 @@ maintainers = [
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
 requires-python = ">= 3.13"
-version = "v0.4.15"
+version = "v0.4.16"
 readme = "README.md"
 license = { text = "MIT" }
 keywords = ["prior-fields", "bayesian inference", "spde", "fenicsx", "petsc", "FEM"]
@@ -28,7 +28,7 @@ urls = { repository = "https://github.com/UQatKIT/LS-Prior", documentation = "ht
 # ==================================================================================================
 [tool.pixi.dependencies]
 numpy = ">=2.2"
-fenics-dolfinx = ">=0.9.0"
+fenics-dolfinx = ">=0.9.0,<0.10"
 mpich = ">=4.3.1"
 beartype = ">=0.21.0"
 scifem = ">=0.7.0"
@@ -85,8 +85,8 @@ all = { features = [
 # Pixi Workspace and Build
 # ==================================================================================================
 [build-system]
-build-backend = "uv_build"
-requires = ["uv_build>=0.8.0"]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -94,18 +94,14 @@ platforms = ["linux-64"]
 preview = ["pixi-build"]
 
 [tool.pixi.package.build]
-backend = { name = "pixi-build-python", version = "*", channels = [
-  "https://prefix.dev/conda-forge",
-] }
+backend = { name = "pixi-build-python", version = "*" }
 
 [tool.pixi.package.host-dependencies]
-uv = "*"
-git = "*"
 hatchling = "*"
 
 [tool.pixi.package.run-dependencies]
 numpy = ">=2.2"
-fenics-dolfinx = ">=0.9.0"
+fenics-dolfinx = ">=0.9.0,<0.10"
 mpich = ">=4.3.1"
 beartype = ">=0.21.0"
 scifem = ">=0.7.0"
