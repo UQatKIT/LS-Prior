@@ -36,9 +36,4 @@ conda install -c https://repo.prefix.dev/kruse-forge ls-prior
 
 ## Documentation
 
-The [documentation](https://uqatkit.github.io/LS-Prior/) provides further information regarding usage, technical setup and API. Alternatively, you can check out the notebooks under [`examples`](https://github.com/UQatKIT/LS-Prior/tree/main/examples)
-
-## Acknowledgement and License
-
-LS-Prior is being developed in the research group [Uncertainty Quantification](https://www.scc.kit.edu/forschung/uq.php) at KIT. It is distributed as free software under the [MIT License](https://choosealicense.com/licenses/mit/). Major portions of the implementation are inspired by the
-prior implementation of the [hIPPYlib](https://hippylib.github.io/) library.
+The [documentation](https://maximilian-kruse.github.io/LS-Prior/) provides further information regarding usage, technical setup and API. Alternatively, you can check out the notebooks under [`examples`](https://github.com/maximilian-kruse/LS-Prior/tree/main/examples)

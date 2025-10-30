@@ -4,8 +4,8 @@
 
 /* Custom colors */
 [data-md-color-scheme="default"] {
-    --md-primary-fg-color:        #009682;
-    --md-accent-fg-color:         #009682;
+    --md-primary-fg-color:        #62748E;
+    --md-accent-fg-color:         #62748E;
     --md-footer-bg-color--dark:   #ffffff;
     --md-footer-fg-color:         #000000;
     --md-footer-fg-color--light:  #00000090;
@@ -15,8 +15,8 @@
     --doc-heading-color-alt:      #F0F0F0;
 }
 [data-md-color-scheme="slate"] {
-    --md-primary-fg-color:        #009682;
-    --md-accent-fg-color:         #009682;
+    --md-primary-fg-color:        #62748E;
+    --md-accent-fg-color:         #62748E;
     --doc-heading-color:          #000000;
     --doc-heading-border-color:   #000000;
     --doc-heading-color-alt:      #000000;

@@ -30,7 +30,6 @@ jobs:
   # Build documentation without deploying
   docs:
     runs-on: ubuntu-latest
-    environment: release
     steps:
       - name: Checkout code
         id: checkout-code

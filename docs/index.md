@@ -1,4 +1,4 @@
-# LS-Prior [<img src="images/uq_logo.png" width="200" height="100" alt="UQ at KIT" align="right">](https://www.scc.kit.edu/forschung/uq.php)
+# LS-Prior
 
 LS-Prior is a python package for large-scale Gaussian prior measures. The implementation is based on the SPDE approach to Gaussian Matérn fields popularized by
 [Lindgren et al.](https://rss.onlinelibrary.wiley.com/doi/10.1111/j.1467-9868.2011.00777.x).
@@ -42,9 +42,4 @@ The API reference contains detailed explanations of all software components of L
 
 #### Examples
 
-We provide [runnable examples](https://github.com/UQatKIT/LS-Prior/tree/main/examples) in our Github repository.
-
-## Acknowledgement and License
-
-LS-Prior is being developed in the research group [Uncertainty Quantification](https://www.scc.kit.edu/forschung/uq.php) at KIT. It is distributed as free software under the [MIT License](https://choosealicense.com/licenses/mit/). Major portions of the implementation are inspired by the
-prior implementation of the [hIPPYlib](https://hippylib.github.io/) library.
+We provide [runnable examples](https://github.com/maximilian-kruse/LS-Prior/tree/main/examples) in our Github repository.
