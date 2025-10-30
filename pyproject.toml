@@ -2,9 +2,9 @@
 # Project Metadata
 # ==================================================================================================
 [project]
-authors = [{ name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" }]
+authors = [{ name = "Maximilian Kruse", email = "maxkruse1604@gmail.com" }]
 maintainers = [
-  { name = "Maximilian Kruse", email = "maximilian.kruse@kit.edu" },
+  { name = "Maximilian Kruse", email = "maxkruse1604@gmail.com" },
 ]
 description = "Large-Scale Gaussian Prior Fields via SPDEs"
 name = "ls-prior"
