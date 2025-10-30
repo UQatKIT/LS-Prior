@@ -33,7 +33,7 @@ jobs:
           locked: true
       - name: Install dependencies
         id: install-deps
-        run: pixi install -e docs
+        run: pixi lock && pixi install -e docs
       - name: Create changelog
         id: create-changelog
         run: pixi run -e docs changelog --latest --strip all --output ${{ github.workspace }}/changelog.md
@@ -63,7 +63,7 @@ jobs:
           locked: true
       - name: Build package
         id: build-package
-        run: pixi build
+        run: pixi lock && pixi build
       - name: Install rattler-build
         id: install-rattler-build
         run: pixi global install rattler-build
