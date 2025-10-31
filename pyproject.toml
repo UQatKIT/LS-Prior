@@ -110,14 +110,6 @@ scifem = ">=0.7.0"
 # ==================================================================================================
 # Pixi Tasks
 # ==================================================================================================
-[tool.pixi.tasks]
-test = "pytest test"
-format = "ruff format"
-serve-docs = "mkdocs serve"
-build-docs = "mkdocs build"
-changelog = "git-cliff"
-pre-commit = "pre-commit install"
-
 [tool.pixi.tasks.bump-version]
 args = ["version"]
 cmd = "toml set --toml-path pyproject.toml project.version {{version}} && pixi lock"
