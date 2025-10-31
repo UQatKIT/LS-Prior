@@ -19,3 +19,12 @@ repos:
     rev: 0.33.3
     hooks:
       - id: check-github-workflows
+
+  - repo: local
+    hooks:
+      - id: pixi-lock
+        name: Run `pixi lock`
+        entry: pixi lock
+        language: system
+        pass_filenames: false
+

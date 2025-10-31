@@ -42,7 +42,7 @@ jobs:
           locked: true
       - name: Install dependencies
         id: install-deps
-        run: pixi install -e docs
+        run: pixi lock && pixi install -e docs
       - name: Build MkDocs documentation
         id: build-docs
         run: pixi run -e docs mkdocs build
@@ -62,7 +62,7 @@ jobs:
           locked: true
       - name: Install dependencies
         id: install-deps
-        run: pixi install -e test
+        run: pixi lock && pixi install -e test
       - name: Run tests with Pytest
         id: run-tests
         run: pixi run -e test pytest
